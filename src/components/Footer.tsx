@@ -5,47 +5,45 @@ import { Button } from "@/components/ui/button";
 
 const Footer = () => {
   return (
-    <footer className="bg-nutri-dark-900 text-white py-16">
+    <footer className="bg-app-gray-900 text-white py-16">
       <div className="container mx-auto px-6">
         <div className="text-center space-y-8">
           <h2 className="text-3xl font-bold">
-            Venha conosco para uma vida melhor!
+            Pronto para transformar sua nutrição?
           </h2>
-          <h3 className="text-xl text-nutri-green-200">
-            Invista no seu futuro
+          <h3 className="text-xl text-app-gray-300">
+            Junte-se a milhares de pessoas que já mudaram sua vida
           </h3>
           <Button 
             size="lg"
-            className="bg-nutri-green-500 hover:bg-nutri-green-600 text-white px-8 py-6 text-lg rounded-full"
+            className="bg-app-green-500 hover:bg-app-green-600 text-white px-8 py-6 text-lg rounded-lg"
           >
-            Associar-se
+            Começar Gratuitamente
           </Button>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-gray-700">
+        <div className="mt-16 pt-8 border-t border-app-gray-700">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full">
-                <Heart className="w-5 h-5 text-nutri-green-600" fill="currentColor" />
+              <div className="flex items-center justify-center w-8 h-8 bg-app-blue-500 rounded-full">
+                <Heart className="w-5 h-5 text-white" fill="currentColor" />
               </div>
               <span className="text-xl font-bold">
-                <span className="text-nutri-green-400">Nutri</span>Match
+                <span className="text-app-blue-400">Nutri</span>
+                <span className="text-app-green-400">Match</span>
               </span>
             </div>
 
             <div className="text-center md:text-right">
-              <p className="text-gray-400 mb-2">Sua dieta, do seu jeito.</p>
-              <div className="flex flex-wrap justify-center md:justify-end space-x-6 text-sm text-gray-400">
-                <a href="#" className="hover:text-nutri-green-400">Política</a>
-                <a href="#" className="hover:text-nutri-green-400">Privacidade</a>
-                <a href="#" className="hover:text-nutri-green-400">Condições</a>
-                <a href="#" className="hover:text-nutri-green-400">Info</a>
-                <a href="#" className="hover:text-nutri-green-400">Feedback</a>
+              <p className="text-app-gray-400 mb-2">Transformando vidas através da nutrição inteligente.</p>
+              <div className="flex flex-wrap justify-center md:justify-end space-x-6 text-sm text-app-gray-400">
+                <a href="#" className="hover:text-app-blue-400">Política de Privacidade</a>
+                <a href="#" className="hover:text-app-blue-400">Termos de Uso</a>
+                <a href="#" className="hover:text-app-blue-400">Contato</a>
+                <a href="#" className="hover:text-app-blue-400">Suporte</a>
               </div>
-              <p className="text-xs text-gray-500 mt-4">
+              <p className="text-xs text-app-gray-500 mt-4">
                 © 2024 NutriMatch. Todos os direitos reservados.
-                <br />
-                2025/2024-1234
               </p>
             </div>
           </div>

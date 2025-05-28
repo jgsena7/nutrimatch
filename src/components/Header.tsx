@@ -9,37 +9,38 @@ const Header = () => {
   const location = useLocation();
 
   return (
-    <header className="bg-nutri-dark-900 text-white py-4 px-6">
+    <header className="bg-white shadow-sm border-b border-app-gray-200 py-4 px-6">
       <div className="container mx-auto flex items-center justify-between">
         <div 
           className="flex items-center space-x-2 cursor-pointer" 
           onClick={() => navigate('/')}
         >
-          <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full">
-            <Heart className="w-5 h-5 text-nutri-green-600" fill="currentColor" />
+          <div className="flex items-center justify-center w-10 h-10 bg-app-blue-500 rounded-full">
+            <Heart className="w-6 h-6 text-white" fill="currentColor" />
           </div>
-          <span className="text-xl font-bold">
-            <span className="text-nutri-green-400">Nutri</span>Match
+          <span className="text-2xl font-bold">
+            <span className="text-app-blue-600">Nutri</span>
+            <span className="text-app-green-600">Match</span>
           </span>
         </div>
         
         <nav className="hidden md:flex items-center space-x-8">
           <button 
             onClick={() => navigate('/')}
-            className={`hover:text-nutri-green-400 transition-colors ${
-              location.pathname === '/' ? 'text-nutri-green-400' : ''
+            className={`text-app-gray-700 hover:text-app-blue-600 transition-colors font-medium ${
+              location.pathname === '/' ? 'text-app-blue-600 border-b-2 border-app-blue-600 pb-1' : ''
             }`}
           >
             Início
           </button>
-          <button className="hover:text-nutri-green-400 transition-colors">
+          <button className="text-app-gray-700 hover:text-app-blue-600 transition-colors font-medium">
             Perfil Nutricional
           </button>
-          <button className="hover:text-nutri-green-400 transition-colors">
-            Fale Conosco
+          <button className="text-app-gray-700 hover:text-app-blue-600 transition-colors font-medium">
+            Sobre Nós
           </button>
-          <button className="hover:text-nutri-green-400 transition-colors">
-            Conheça Já
+          <button className="text-app-gray-700 hover:text-app-blue-600 transition-colors font-medium">
+            Contato
           </button>
         </nav>
 
@@ -48,7 +49,7 @@ const Header = () => {
             variant="ghost" 
             size="sm"
             onClick={() => navigate('/login')}
-            className="text-white hover:text-nutri-green-400 hover:bg-nutri-dark-700"
+            className="text-app-gray-700 hover:text-app-blue-600 hover:bg-app-blue-50"
           >
             <User className="w-4 h-4 mr-2" />
             Entrar
@@ -56,7 +57,7 @@ const Header = () => {
           <Button 
             size="sm"
             onClick={() => navigate('/register')}
-            className="bg-nutri-green-500 hover:bg-nutri-green-600 text-white"
+            className="bg-app-green-500 hover:bg-app-green-600 text-white px-6 py-2 rounded-lg"
           >
             Cadastrar
           </Button>

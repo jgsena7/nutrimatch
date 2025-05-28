@@ -48,82 +48,83 @@ const RegisterForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+    <div className="min-h-screen bg-gradient-to-br from-app-blue-50 via-white to-app-green-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-xl border border-app-gray-200">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-              <Heart className="w-8 h-8 text-nutri-green-600" strokeWidth={2} />
+            <div className="w-16 h-16 bg-app-blue-500 rounded-full flex items-center justify-center">
+              <Heart className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-nutri-dark-900">Criar Conta</h2>
+          <h2 className="text-2xl font-bold text-app-gray-900">Criar Conta</h2>
+          <p className="text-app-gray-600 mt-2">Junte-se à comunidade NutriMatch</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 w-5 h-5" />
             <Input
               type="text"
               placeholder="Nome Completo"
               value={formData.fullName}
               onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              className="pl-12 py-6 text-lg border border-app-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue-500 focus:border-app-blue-500"
             />
           </div>
 
           <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 w-5 h-5" />
             <Input
               type="text"
               placeholder="Usuário"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
-              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              className="pl-12 py-6 text-lg border border-app-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue-500 focus:border-app-blue-500"
             />
           </div>
 
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 w-5 h-5" />
             <Input
               type="email"
               placeholder="E-mail"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              className="pl-12 py-6 text-lg border border-app-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue-500 focus:border-app-blue-500"
             />
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 w-5 h-5" />
             <Input
               type={showPassword ? "text" : "password"}
               placeholder="Senha"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              className="pl-12 pr-12 py-6 text-lg border border-app-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue-500 focus:border-app-blue-500"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 hover:text-app-gray-600"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 w-5 h-5" />
             <Input
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirmar Senha"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-              className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              className="pl-12 pr-12 py-6 text-lg border border-app-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue-500 focus:border-app-blue-500"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-app-gray-400 hover:text-app-gray-600"
             >
               {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -131,18 +132,18 @@ const RegisterForm = () => {
 
           <Button
             type="submit"
-            className="w-full py-6 text-lg font-semibold bg-nutri-green-600 hover:bg-nutri-green-700 text-white rounded-full mt-6"
+            className="w-full py-6 text-lg font-semibold bg-app-blue-600 hover:bg-app-blue-700 text-white rounded-lg mt-6"
           >
             Criar Conta
           </Button>
 
           <div className="text-center mt-6">
-            <p className="text-gray-600">
+            <p className="text-app-gray-600">
               Já tem conta?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-nutri-green-600 hover:text-nutri-green-700 font-semibold"
+                className="text-app-blue-600 hover:text-app-blue-700 font-semibold"
               >
                 Faça login
               </button>
