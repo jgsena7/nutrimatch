@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900">
+    <div className="min-h-screen bg-gradient-to-br from-nutri-blue-600 via-nutri-blue-700 to-nutri-green-600">
       <Header />
       
       <main className="container mx-auto px-6 py-12">
@@ -16,7 +16,7 @@ const Dashboard = () => {
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/10 backdrop-blur-sm">
             <TabsTrigger 
               value="profile" 
-              className="data-[state=active]:bg-nutri-green-500 data-[state=active]:text-white text-white"
+              className="data-[state=active]:bg-nutri-blue-500 data-[state=active]:text-white text-white"
             >
               Perfil Nutricional
             </TabsTrigger>
