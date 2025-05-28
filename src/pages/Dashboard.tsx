@@ -8,30 +8,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-app-blue-50 via-white to-app-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900">
       <Header />
       
       <main className="container mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-app-gray-900 mb-4">
-            Seu Dashboard <span className="text-app-blue-600">Nutricional</span>
-          </h1>
-          <p className="text-xl text-app-gray-600">
-            Gerencie seu perfil e acompanhe suas análises nutricionais
-          </p>
-        </div>
-
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 bg-white shadow-sm border border-app-gray-200">
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/10 backdrop-blur-sm">
             <TabsTrigger 
               value="profile" 
-              className="data-[state=active]:bg-app-blue-500 data-[state=active]:text-white text-app-gray-700 py-3"
+              className="data-[state=active]:bg-nutri-green-500 data-[state=active]:text-white text-white"
             >
               Perfil Nutricional
             </TabsTrigger>
             <TabsTrigger 
               value="analysis" 
-              className="data-[state=active]:bg-app-green-500 data-[state=active]:text-white text-app-gray-700 py-3"
+              className="data-[state=active]:bg-nutri-green-500 data-[state=active]:text-white text-white"
             >
               Análise Nutricional
             </TabsTrigger>
