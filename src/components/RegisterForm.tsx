@@ -48,15 +48,15 @@ const RegisterForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-nutri-blue-600 via-nutri-blue-700 to-nutri-green-600 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-nutri-blue-50 rounded-full flex items-center justify-center">
-              <Heart className="w-8 h-8 text-nutri-blue-600" strokeWidth={2} />
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+              <Heart className="w-8 h-8 text-nutri-green-600" strokeWidth={2} />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-nutri-blue-800">Criar Conta</h2>
+          <h2 className="text-2xl font-bold text-nutri-dark-900">Criar Conta</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,7 +67,7 @@ const RegisterForm = () => {
               placeholder="Nome Completo"
               value={formData.fullName}
               onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-blue-500 focus:border-nutri-blue-500"
+              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
             />
           </div>
 
@@ -78,7 +78,7 @@ const RegisterForm = () => {
               placeholder="Usuário"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
-              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-blue-500 focus:border-nutri-blue-500"
+              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
             />
           </div>
 
@@ -89,7 +89,7 @@ const RegisterForm = () => {
               placeholder="E-mail"
               value={formData.email}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-blue-500 focus:border-nutri-blue-500"
+              className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
             />
           </div>
 
@@ -100,7 +100,7 @@ const RegisterForm = () => {
               placeholder="Senha"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-blue-500 focus:border-nutri-blue-500"
+              className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
             />
             <button
               type="button"
@@ -118,7 +118,7 @@ const RegisterForm = () => {
               placeholder="Confirmar Senha"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-              className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-blue-500 focus:border-nutri-blue-500"
+              className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
             />
             <button
               type="button"
@@ -131,7 +131,7 @@ const RegisterForm = () => {
 
           <Button
             type="submit"
-            className="w-full py-6 text-lg font-semibold bg-nutri-blue-600 hover:bg-nutri-blue-700 text-white rounded-full mt-6"
+            className="w-full py-6 text-lg font-semibold bg-nutri-green-600 hover:bg-nutri-green-700 text-white rounded-full mt-6"
           >
             Criar Conta
           </Button>
@@ -142,7 +142,7 @@ const RegisterForm = () => {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-nutri-blue-600 hover:text-nutri-blue-700 font-semibold"
+                className="text-nutri-green-600 hover:text-nutri-green-700 font-semibold"
               >
                 Faça login
               </button>

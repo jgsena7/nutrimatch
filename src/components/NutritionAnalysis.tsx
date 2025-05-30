@@ -6,9 +6,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 
 const NutritionAnalysis = () => {
   const nutritionData = [
-    { name: 'Proteínas', value: 39.5, calories: 326, color: '#22c55e' },
-    { name: 'Lipídios', value: 19.7, calories: 251.3, color: '#3b82f6' },
-    { name: 'Carboidratos', value: 40.8, calories: 400.7, color: '#1e40af' }
+    { name: 'Proteínas', value: 39.5, calories: 326, color: '#9AE6B4' },
+    { name: 'Lipídios', value: 19.7, calories: 251.3, color: '#4A5568' },
+    { name: 'Carboidratos', value: 40.8, calories: 400.7, color: '#2D3748' }
   ];
 
   const meals = [
@@ -25,16 +25,15 @@ const NutritionAnalysis = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          <span className="text-nutri-blue-200">Nutri</span>
-          <span className="text-nutri-green-300">Match</span> - Seu Plano Alimentar Personalizado
+        <h1 className="text-3xl font-bold text-nutri-dark-900 mb-2">
+          <span className="text-nutri-green-500">Nutri</span>Match - Seu Plano Alimentar Personalizado
         </h1>
-        <div className="w-32 h-1 bg-nutri-green-400 mx-auto rounded-full"></div>
+        <div className="w-32 h-1 bg-nutri-green-500 mx-auto rounded-full"></div>
       </div>
 
-      <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+      <Card className="bg-gray-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-nutri-blue-800">
+          <CardTitle className="text-xl font-semibold text-nutri-dark-900">
             Análise de nutrientes do cardápio
           </CardTitle>
         </CardHeader>
@@ -69,10 +68,10 @@ const NutritionAnalysis = () => {
                       className="w-4 h-4 rounded"
                       style={{ backgroundColor: item.color }}
                     ></div>
-                    <span className="font-medium text-nutri-blue-800">{item.name}</span>
+                    <span className="font-medium text-nutri-dark-900">{item.name}</span>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold text-nutri-blue-800">{item.calories} Kcal - {item.value}%</div>
+                    <div className="font-semibold text-nutri-dark-900">{item.calories} Kcal - {item.value}%</div>
                   </div>
                 </div>
               ))}
@@ -81,9 +80,9 @@ const NutritionAnalysis = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-white/90 backdrop-blur-sm shadow-lg">
+      <Card className="bg-gray-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-nutri-blue-800">
+          <CardTitle className="text-xl font-semibold text-nutri-dark-900">
             Refeições
           </CardTitle>
         </CardHeader>
@@ -124,7 +123,7 @@ const NutritionAnalysis = () => {
           </div>
 
           <div className="bg-white rounded-lg p-6 shadow">
-            <h3 className="font-semibold text-nutri-blue-800 mb-4 flex items-center">
+            <h3 className="font-semibold text-nutri-dark-900 mb-4 flex items-center">
               {meals[0].time}
               <button className="ml-2 text-gray-400 hover:text-gray-600">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -9,37 +9,36 @@ const Header = () => {
   const location = useLocation();
 
   return (
-    <header className="bg-white shadow-md py-4 px-6">
+    <header className="bg-nutri-dark-900 text-white py-4 px-6">
       <div className="container mx-auto flex items-center justify-between">
         <div 
           className="flex items-center space-x-2 cursor-pointer" 
           onClick={() => navigate('/')}
         >
-          <div className="flex items-center justify-center w-8 h-8 bg-nutri-blue-500 rounded-full">
-            <Heart className="w-5 h-5 text-white" fill="currentColor" />
+          <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full">
+            <Heart className="w-5 h-5 text-nutri-green-600" fill="currentColor" />
           </div>
           <span className="text-xl font-bold">
-            <span className="text-nutri-blue-600">Nutri</span>
-            <span className="text-nutri-green-600">Match</span>
+            <span className="text-nutri-green-400">Nutri</span>Match
           </span>
         </div>
         
         <nav className="hidden md:flex items-center space-x-8">
           <button 
             onClick={() => navigate('/')}
-            className={`hover:text-nutri-blue-600 transition-colors ${
-              location.pathname === '/' ? 'text-nutri-blue-600' : 'text-gray-700'
+            className={`hover:text-nutri-green-400 transition-colors ${
+              location.pathname === '/' ? 'text-nutri-green-400' : ''
             }`}
           >
             Início
           </button>
-          <button className="text-gray-700 hover:text-nutri-blue-600 transition-colors">
+          <button className="hover:text-nutri-green-400 transition-colors">
             Perfil Nutricional
           </button>
-          <button className="text-gray-700 hover:text-nutri-blue-600 transition-colors">
+          <button className="hover:text-nutri-green-400 transition-colors">
             Fale Conosco
           </button>
-          <button className="text-gray-700 hover:text-nutri-blue-600 transition-colors">
+          <button className="hover:text-nutri-green-400 transition-colors">
             Conheça Já
           </button>
         </nav>
@@ -49,7 +48,7 @@ const Header = () => {
             variant="ghost" 
             size="sm"
             onClick={() => navigate('/login')}
-            className="text-gray-700 hover:text-nutri-blue-600 hover:bg-nutri-blue-50"
+            className="text-white hover:text-nutri-green-400 hover:bg-nutri-dark-700"
           >
             <User className="w-4 h-4 mr-2" />
             Entrar
