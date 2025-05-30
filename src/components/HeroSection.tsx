@@ -33,21 +33,12 @@ const HeroSection = () => {
           </div>
 
           <div className="relative">
-            <div className="relative z-10 bg-white rounded-3xl p-8 shadow-2xl">
+            <div className="relative z-10">
               <img 
                 src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop&crop=center" 
                 alt="Prato saudável com diversos alimentos" 
                 className="w-full h-64 object-cover rounded-2xl mb-6"
               />
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-nutri-dark-900">
-                  Planejamento alimentar personalizado.
-                </h3>
-                <p className="text-gray-600">
-                  Tudo isso em uma única interface simples, intuitiva e acessível, para 
-                  que qualquer pessoa possa viver com mais praticidade e segurança.
-                </p>
-              </div>
             </div>
             
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-nutri-green-400 rounded-full opacity-20"></div>

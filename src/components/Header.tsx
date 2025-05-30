@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Header = () => {
@@ -15,9 +15,6 @@ const Header = () => {
           className="flex items-center space-x-2 cursor-pointer" 
           onClick={() => navigate('/')}
         >
-          <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full">
-            <Heart className="w-5 h-5 text-nutri-green-600" fill="currentColor" />
-          </div>
           <span className="text-xl font-bold">
             <span className="text-nutri-green-400">Nutri</span>Match
           </span>

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,11 +36,9 @@ const LoginForm = () => {
     <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-              <Heart className="w-8 h-8 text-nutri-green-600" strokeWidth={2} />
-            </div>
-          </div>
+          <span className="text-2xl font-bold">
+            <span className="text-nutri-green-400">Nutri</span>Match
+          </span>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
