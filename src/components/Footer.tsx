@@ -6,7 +6,8 @@ const Footer = () => {
   return (
     <footer className="bg-[#18230F] text-white py-16">
       <div className="container mx-auto px-6">
-        <div className="text-center space-y-8">
+        {/* SEÇÃO SUPERIOR DO FOOTER - Call to Action */}
+        <div className="footer-top-section text-center space-y-8">
           <h2 className="text-3xl font-bold text-white">
             Venha conosco para uma vida melhor!
           </h2>
@@ -21,7 +22,8 @@ const Footer = () => {
           </Button>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-gray-600">
+        {/* SEÇÃO INFERIOR DO FOOTER - Informações e Links */}
+        <div className="footer-bottom-section mt-16 pt-8 border-t border-gray-600">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <span className="text-xl font-bold">
