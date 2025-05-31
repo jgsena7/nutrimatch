@@ -29,7 +29,12 @@ const Header = () => {
           >
             Início
           </button>
-          <button className="hover:text-nutri-green-400 transition-colors">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className={`hover:text-nutri-green-400 transition-colors ${
+              location.pathname === '/dashboard' ? 'text-nutri-green-400' : ''
+            }`}
+          >
             Perfil Nutricional
           </button>
           <button className="hover:text-nutri-green-400 transition-colors">
