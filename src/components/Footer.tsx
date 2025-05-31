@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 
@@ -7,7 +6,7 @@ const Footer = () => {
     <footer className="bg-[#18230F] text-white py-16">
       <div className="container mx-auto px-6">
         {/* SEÇÃO SUPERIOR DO FOOTER - Call to Action */}
-        <div className="footer-top-section text-center space-y-8">
+        <div className="footer-top-section bg-[#255F38] text-center space-y-8 py-12 px-8 rounded-lg">
           <h2 className="text-3xl font-bold text-white">
             Venha conosco para uma vida melhor!
           </h2>
