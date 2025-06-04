@@ -18,10 +18,12 @@ const HeroSection = () => {
             <h2 className="text-2xl lg:text-3xl font-light text-white">
               Sua dieta, do seu jeito.
             </h2>
-            <p className="text-lg text-gray-300 leading-relaxed max-w-lg">
-              Esta coleção de outros grandiosos pontos sua paixão a descobrir em refeições. 
-              Descubra uma nova forma de comer com o NutriMatch que entende você.
-            </p>
+            <div className="text-lg text-gray-300 leading-relaxed max-w-lg space-y-2">
+              <p>Está cansado de dietas genéricas?</p>
+              <p>Monte seu plano alimentar em minutos.</p>
+              <p>De forma fácil, personalizada e inteligente.</p>
+              <p>Nutrição que entende você.</p>
+            </div>
             <Button 
               size="lg" 
               onClick={() => navigate('/register')}

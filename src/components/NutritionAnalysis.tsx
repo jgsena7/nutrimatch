@@ -6,9 +6,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 
 const NutritionAnalysis = () => {
   const nutritionData = [
-    { name: 'Proteínas', value: 39.5, calories: 326, color: '#9AE6B4' },
-    { name: 'Lipídios', value: 19.7, calories: 251.3, color: '#4A5568' },
-    { name: 'Carboidratos', value: 40.8, calories: 400.7, color: '#2D3748' }
+    { name: 'Proteínas', value: 39.5, calories: 326, color: '#A4DA14' },
+    { name: 'Lipídios', value: 19.7, calories: 251.3, color: '#255F38' },
+    { name: 'Carboidratos', value: 40.8, calories: 400.7, color: '#18230F' }
   ];
 
   const meals = [
@@ -25,15 +25,15 @@ const NutritionAnalysis = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-nutri-dark-900 mb-2">
-          <span className="text-nutri-green-500">Nutri</span>Match - Seu Plano Alimentar Personalizado
+        <h1 className="text-3xl font-bold text-black mb-2">
+          <span className="text-nutri-green-400">Nutri</span><span className="text-white">Match</span> - Seu Plano Alimentar Personalizado
         </h1>
         <div className="w-32 h-1 bg-nutri-green-500 mx-auto rounded-full"></div>
       </div>
 
       <Card className="bg-gray-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-nutri-dark-900">
+          <CardTitle className="text-xl font-semibold text-black">
             Análise de nutrientes do cardápio
           </CardTitle>
         </CardHeader>
@@ -82,7 +82,7 @@ const NutritionAnalysis = () => {
 
       <Card className="bg-gray-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-nutri-dark-900">
+          <CardTitle className="text-xl font-semibold text-black">
             Refeições
           </CardTitle>
         </CardHeader>

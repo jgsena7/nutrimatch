@@ -16,7 +16,7 @@ const Dashboard = () => {
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/10 backdrop-blur-sm">
             <TabsTrigger 
               value="profile" 
-              className="data-[state=active]:bg-nutri-green-500 data-[state=active]:text-white text-white"
+              className="data-[state=active]:bg-nutri-green-500 data-[state=active]:text-white text-black"
             >
               Perfil Nutricional
             </TabsTrigger>
