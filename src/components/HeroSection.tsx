@@ -1,34 +1,26 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Apple, TrendingUp, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
 const HeroSection = () => {
   const navigate = useNavigate();
-
-  return (
-    <div className="bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 min-h-screen flex items-center">
+  return <div className="bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 min-h-screen flex items-center">
       <div className="container mx-auto px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="text-white space-y-8">
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
               Bem-vindo ao <span className="text-nutri-green-400">NutriMatch</span>
             </h1>
-            <h2 className="text-2xl lg:text-3xl font-light text-white">
+            <h2 className="text-2xl text-white font-normal lg:text-3xl">
               Sua dieta, do seu jeito.
             </h2>
-            <div className="text-lg text-gray-300 leading-relaxed max-w-lg space-y-2">
-              <p>Está cansado de dietas genéricas?</p>
-              <p>Monte seu plano alimentar em minutos.</p>
-              <p>De forma fácil, personalizada e inteligente.</p>
-              <p>Nutrição que entende você.</p>
+            <div className="text-lg text-gray-300 leading-relaxed max-w-lg space-y-2 rounded-none py-px bg-white/0">
+              <p className="text-xl text-white font-normal">Está cansado de dietas genéricas?</p>
+              <p className="text-xl font-normal text-white">Monte seu plano alimentar em minutos.</p>
+              <p className="text-xl font-normal text-white">De forma fácil, personalizada e inteligente.</p>
+              <p className="py-0 text-xl font-normal text-white">Nutrição que entende você.</p>
             </div>
-            <Button 
-              size="lg" 
-              onClick={() => navigate('/register')}
-              className="bg-nutri-green-500 hover:bg-nutri-green-600 text-white text-lg px-8 py-6 rounded-full"
-            >
+            <Button size="lg" onClick={() => navigate('/register')} className="bg-nutri-green-500 hover:bg-nutri-green-600 text-white text-lg px-8 py-6 rounded-full">
               Saiba Mais
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -36,11 +28,7 @@ const HeroSection = () => {
 
           <div className="relative">
             <div className="relative z-10">
-              <img 
-                src="/lovable-uploads/44f7e8fd-e71f-4ad1-a1b3-afc85c3e8eca.png" 
-                alt="Prato saudável com diversos alimentos" 
-                className="w-full h-64 object-cover rounded-2xl mb-6"
-              />
+              <img alt="Prato saudável com diversos alimentos" src="https://images.pexels.com/photos/13166885/pexels-photo-13166885.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" className="w-full h-64 rounded-2xl mb-6 object-cover" />
             </div>
             
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-nutri-green-400 rounded-full opacity-20"></div>
@@ -89,8 +77,6 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default HeroSection;
