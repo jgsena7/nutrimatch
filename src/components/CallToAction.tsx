@@ -7,9 +7,9 @@ const CallToAction = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="bg-[#3A5B32] w-full py-20">
+    <section className="bg-[#255e39] w-full py-24">
       <div className="container mx-auto px-6 text-center">
-        <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
+        <h2 className="text-2xl lg:text-3xl font-semibold text-white mb-4">
           Venha conosco para uma vida melhor!
         </h2>
         <h3 className="text-2xl lg:text-3xl font-semibold text-white mb-8">
@@ -18,7 +18,7 @@ const CallToAction = () => {
         <Button 
           size="lg"
           onClick={() => navigate('/register')}
-          className="bg-[#A8D12F] hover:bg-[#96c028] text-black px-8 py-3 text-lg rounded-full font-medium shadow-lg"
+          className="bg-[#A8D12F] hover:bg-[#96c028] text-white px-8 py-3 text-lg rounded-full font-medium shadow-lg"
         >
           Associar-se
         </Button>

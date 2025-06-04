@@ -15,7 +15,7 @@ const HeroSection = () => {
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
               Bem-vindo ao <span className="text-nutri-green-400">NutriMatch</span>
             </h1>
-            <h2 className="text-2xl lg:text-3xl font-light text-nutri-green-200">
+            <h2 className="text-2xl lg:text-3xl font-light text-white">
               Sua dieta, do seu jeito.
             </h2>
             <p className="text-lg text-gray-300 leading-relaxed max-w-lg">
@@ -35,7 +35,7 @@ const HeroSection = () => {
           <div className="relative">
             <div className="relative z-10">
               <img 
-                src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop&crop=center" 
+                src="/lovable-uploads/44f7e8fd-e71f-4ad1-a1b3-afc85c3e8eca.png" 
                 alt="Prato saudável com diversos alimentos" 
                 className="w-full h-64 object-cover rounded-2xl mb-6"
               />

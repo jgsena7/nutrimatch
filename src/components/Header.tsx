@@ -8,6 +8,13 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const scrollToFooter = () => {
+    const footer = document.querySelector('footer');
+    if (footer) {
+      footer.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <header className="bg-nutri-dark-900 text-white py-4 px-6">
       <div className="container mx-auto flex items-center justify-between">
@@ -37,10 +44,16 @@ const Header = () => {
           >
             Perfil Nutricional
           </button>
-          <button className="hover:text-nutri-green-400 transition-colors">
+          <button 
+            onClick={scrollToFooter}
+            className="hover:text-nutri-green-400 transition-colors"
+          >
             Fale Conosco
           </button>
-          <button className="hover:text-nutri-green-400 transition-colors">
+          <button 
+            onClick={() => navigate('/login')}
+            className="hover:text-nutri-green-400 transition-colors"
+          >
             Conheça Já
           </button>
         </nav>

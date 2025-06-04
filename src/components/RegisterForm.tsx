@@ -51,10 +51,13 @@ const RegisterForm = () => {
     <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
         <div className="text-center mb-8">
-          <span className="text-2xl font-bold">
+          <span 
+            className="text-2xl font-bold cursor-pointer"
+            onClick={() => navigate('/')}
+          >
             <span className="text-nutri-green-400">Nutri</span>Match
           </span>
-          <h2 className="text-2xl font-bold text-nutri-dark-900 mt-4">Criar Conta</h2>
+          <h2 className="text-2xl font-bold mt-4" style={{ color: '#A4DA14' }}>Criar Conta</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -129,7 +132,8 @@ const RegisterForm = () => {
 
           <Button
             type="submit"
-            className="w-full py-6 text-lg font-semibold bg-nutri-green-600 hover:bg-nutri-green-700 text-white rounded-full mt-6"
+            className="w-full py-6 text-lg font-semibold text-white rounded-full mt-6"
+            style={{ backgroundColor: 'rgb(37, 94, 57)' }}
           >
             Criar Conta
           </Button>
@@ -140,7 +144,8 @@ const RegisterForm = () => {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-nutri-green-600 hover:text-nutri-green-700 font-semibold"
+                className="font-semibold"
+                style={{ color: '#A4DA14' }}
               >
                 Faça login
               </button>
