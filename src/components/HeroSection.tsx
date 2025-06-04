@@ -35,8 +35,8 @@ const HeroSection = () => {
           <div className="relative">
             <div className="relative z-10">
               <img 
-                src="/lovable-uploads/78f212d5-3832-4fb1-82b0-5e758c731f71.png" 
-                alt="Prato saudável com diversos alimentos nutritivos" 
+                src="/lovable-uploads/44f7e8fd-e71f-4ad1-a1b3-afc85c3e8eca.png" 
+                alt="Prato saudável com diversos alimentos" 
                 className="w-full h-64 object-cover rounded-2xl mb-6"
               />
             </div>

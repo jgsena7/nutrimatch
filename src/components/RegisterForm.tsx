@@ -57,7 +57,7 @@ const RegisterForm = () => {
           >
             <span className="text-nutri-green-400">Nutri</span>Match
           </span>
-          <h2 className="text-2xl font-bold mt-4" style={{ color: 'rgb(37, 94, 57)' }}>Criar Conta</h2>
+          <h2 className="text-2xl font-bold mt-4" style={{ color: '#A4DA14' }}>Criar Conta</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,7 +145,7 @@ const RegisterForm = () => {
                 type="button"
                 onClick={() => navigate('/login')}
                 className="font-semibold"
-                style={{ color: 'rgb(37, 94, 57)' }}
+                style={{ color: '#A4DA14' }}
               >
                 Faça login
               </button>
