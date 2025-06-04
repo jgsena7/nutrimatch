@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-
 const NutritionalProfile = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -20,34 +18,31 @@ const NutritionalProfile = () => {
     foodPreferences: '',
     foodRestrictions: ''
   });
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast({
       title: "Perfil salvo com sucesso!",
-      description: "Seu plano alimentar personalizado está sendo criado.",
+      description: "Seu plano alimentar personalizado está sendo criado."
     });
   };
-
   const handleExport = () => {
     toast({
       title: "Exportando PDF...",
-      description: "Seu perfil nutricional será baixado em instantes.",
+      description: "Seu perfil nutricional será baixado em instantes."
     });
   };
-
   const handleVisualize = () => {
     toast({
       title: "Visualizando plano",
-      description: "Abrindo seu plano alimentar personalizado.",
+      description: "Abrindo seu plano alimentar personalizado."
     });
   };
-
-  return (
-    <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
+  return <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900">
+        <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900 text-black">
           Perfil Nutricional
         </CardTitle>
       </CardHeader>
@@ -56,52 +51,43 @@ const NutritionalProfile = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">Nome</Label>
-              <Input
-                id="name"
-                placeholder="Digite o seu nome"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="bg-white border border-gray-300 rounded-full py-3"
-              />
+              <Input id="name" placeholder="Digite o seu nome" value={formData.name} onChange={e => setFormData({
+              ...formData,
+              name: e.target.value
+            })} className="bg-white border border-gray-300 rounded-full py-3" />
             </div>
             <div>
               <Label htmlFor="age" className="text-sm font-medium text-gray-700 mb-2 block">Idade</Label>
-              <Input
-                id="age"
-                placeholder="Digite a sua idade"
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-                className="bg-white border border-gray-300 rounded-full py-3"
-              />
+              <Input id="age" placeholder="Digite a sua idade" value={formData.age} onChange={e => setFormData({
+              ...formData,
+              age: e.target.value
+            })} className="bg-white border border-gray-300 rounded-full py-3" />
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="height" className="text-sm font-medium text-gray-700 mb-2 block">Altura</Label>
-              <Input
-                id="height"
-                placeholder="Digite a sua altura (centímetros)"
-                value={formData.height}
-                onChange={(e) => setFormData({...formData, height: e.target.value})}
-                className="bg-white border border-gray-300 rounded-full py-3"
-              />
+              <Input id="height" placeholder="Digite a sua altura (centímetros)" value={formData.height} onChange={e => setFormData({
+              ...formData,
+              height: e.target.value
+            })} className="bg-white border border-gray-300 rounded-full py-3" />
             </div>
             <div>
               <Label htmlFor="weight" className="text-sm font-medium text-gray-700 mb-2 block">Peso</Label>
-              <Input
-                id="weight"
-                placeholder="Digite o seu peso (quilos)"
-                value={formData.weight}
-                onChange={(e) => setFormData({...formData, weight: e.target.value})}
-                className="bg-white border border-gray-300 rounded-full py-3"
-              />
+              <Input id="weight" placeholder="Digite o seu peso (quilos)" value={formData.weight} onChange={e => setFormData({
+              ...formData,
+              weight: e.target.value
+            })} className="bg-white border border-gray-300 rounded-full py-3" />
             </div>
           </div>
 
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-3 block">Gênero</Label>
-            <RadioGroup value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
+            <RadioGroup value={formData.gender} onValueChange={value => setFormData({
+            ...formData,
+            gender: value
+          })}>
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="feminino" id="feminino" />
@@ -125,7 +111,10 @@ const NutritionalProfile = () => {
 
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-3 block">Nível de atividade física</Label>
-            <RadioGroup value={formData.activityLevel} onValueChange={(value) => setFormData({...formData, activityLevel: value})}>
+            <RadioGroup value={formData.activityLevel} onValueChange={value => setFormData({
+            ...formData,
+            activityLevel: value
+          })}>
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="sedentario" id="sedentario" />
@@ -149,7 +138,10 @@ const NutritionalProfile = () => {
 
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-3 block">Objetivo de saúde</Label>
-            <RadioGroup value={formData.goal} onValueChange={(value) => setFormData({...formData, goal: value})}>
+            <RadioGroup value={formData.goal} onValueChange={value => setFormData({
+            ...formData,
+            goal: value
+          })}>
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="emagrecimento" id="emagrecimento" />
@@ -170,53 +162,34 @@ const NutritionalProfile = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="foodPreferences" className="text-sm font-medium text-gray-700 mb-2 block">Preferências Alimentares</Label>
-              <Input
-                id="foodPreferences"
-                placeholder="Digite as suas preferências"
-                value={formData.foodPreferences}
-                onChange={(e) => setFormData({...formData, foodPreferences: e.target.value})}
-                className="bg-white border border-gray-300 rounded-full py-3"
-              />
+              <Input id="foodPreferences" placeholder="Digite as suas preferências" value={formData.foodPreferences} onChange={e => setFormData({
+              ...formData,
+              foodPreferences: e.target.value
+            })} className="bg-white border border-gray-300 rounded-full py-3" />
             </div>
             <div>
               <Label htmlFor="foodRestrictions" className="text-sm font-medium text-gray-700 mb-2 block">Restrições Alimentares</Label>
-              <Input
-                id="foodRestrictions"
-                placeholder="Digite as suas restrições"
-                value={formData.foodRestrictions}
-                onChange={(e) => setFormData({...formData, foodRestrictions: e.target.value})}
-                className="bg-white border border-gray-300 rounded-full py-3"
-              />
+              <Input id="foodRestrictions" placeholder="Digite as suas restrições" value={formData.foodRestrictions} onChange={e => setFormData({
+              ...formData,
+              foodRestrictions: e.target.value
+            })} className="bg-white border border-gray-300 rounded-full py-3" />
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-6">
-            <Button 
-              type="submit" 
-              className="flex-1 bg-nutri-green-500 hover:bg-nutri-green-600 text-white py-3 rounded-full font-semibold"
-            >
+            <Button type="submit" className="flex-1 bg-nutri-green-500 hover:bg-nutri-green-600 text-white py-3 rounded-full font-semibold">
               Salvar Plano
             </Button>
-            <Button 
-              type="button" 
-              onClick={handleExport}
-              className="flex-1 bg-nutri-green-600 hover:bg-nutri-green-700 text-white py-3 rounded-full font-semibold"
-            >
+            <Button type="button" onClick={handleExport} className="flex-1 bg-nutri-green-600 hover:bg-nutri-green-700 text-white py-3 rounded-full font-semibold">
               Exportar (PDF)
             </Button>
           </div>
           
-          <Button 
-            type="button" 
-            onClick={handleVisualize}
-            className="w-full bg-nutri-green-400 hover:bg-nutri-green-500 text-white py-3 rounded-full font-semibold"
-          >
+          <Button type="button" onClick={handleVisualize} className="w-full bg-nutri-green-400 hover:bg-nutri-green-500 text-white py-3 rounded-full font-semibold">
             Visualizar Plano
           </Button>
         </form>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default NutritionalProfile;
