@@ -42,7 +42,7 @@ const NutritionalProfile = () => {
   };
   return <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900 text-black/[0.31]">
+        <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900 text-black">
           Perfil Nutricional
         </CardTitle>
       </CardHeader>
