@@ -1,10 +1,14 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Apple, TrendingUp, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
 const HeroSection = () => {
   const navigate = useNavigate();
-  return <div className="bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 min-h-screen flex items-center">
+  
+  return (
+    <div className="bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 min-h-screen flex items-center">
       <div className="container mx-auto px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="text-white space-y-8">
@@ -28,7 +32,11 @@ const HeroSection = () => {
 
           <div className="relative">
             <div className="relative z-10">
-              <img alt="Prato saudável com diversos alimentos" src="https://images.pexels.com/photos/13166885/pexels-photo-13166885.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" className="w-full h-64 rounded-2xl mb-6 object-cover" />
+              <img 
+                alt="Variedade de frutas frescas e coloridas" 
+                src="/lovable-uploads/ecfea6fb-bcbe-4311-96c6-62082dcb5d4e.png" 
+                className="w-full h-64 rounded-2xl mb-6 object-cover" 
+              />
             </div>
             
             <div className="absolute -top-4 -right-4 w-32 h-32 bg-nutri-green-400 rounded-full opacity-20"></div>
@@ -77,6 +85,8 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default HeroSection;
