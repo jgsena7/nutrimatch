@@ -1,17 +1,38 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { User } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   const scrollToFooter = () => {
     const footer = document.querySelector('footer');
     if (footer) {
       footer.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Erro ao sair",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Logout realizado com sucesso!",
+        description: "Você foi desconectado.",
+      });
+      navigate('/');
     }
   };
 
@@ -50,31 +71,52 @@ const Header = () => {
           >
             Fale Conosco
           </button>
-          <button 
-            onClick={() => navigate('/login')}
-            className="hover:text-nutri-green-400 transition-colors"
-          >
-            Conheça Já
-          </button>
+          {!user && (
+            <button 
+              onClick={() => navigate('/login')}
+              className="hover:text-nutri-green-400 transition-colors"
+            >
+              Conheça Já
+            </button>
+          )}
         </nav>
 
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => navigate('/login')}
-            className="text-white hover:text-nutri-green-400 hover:bg-nutri-dark-700"
-          >
-            <User className="w-4 h-4 mr-2" />
-            Entrar
-          </Button>
-          <Button 
-            size="sm"
-            onClick={() => navigate('/register')}
-            className="bg-nutri-green-500 hover:bg-nutri-green-600 text-white"
-          >
-            Cadastrar
-          </Button>
+          {user ? (
+            <>
+              <span className="text-sm text-nutri-green-400">
+                Olá, {user.user_metadata?.full_name || user.email}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleSignOut}
+                className="text-white hover:text-nutri-green-400 hover:bg-nutri-dark-700"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/login')}
+                className="text-white hover:text-nutri-green-400 hover:bg-nutri-dark-700"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Entrar
+              </Button>
+              <Button 
+                size="sm"
+                onClick={() => navigate('/register')}
+                className="bg-nutri-green-500 hover:bg-nutri-green-600 text-white"
+              >
+                Cadastrar
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

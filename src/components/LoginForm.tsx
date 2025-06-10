@@ -1,35 +1,90 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/hooks/useAuth';
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, signInWithGoogle, user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.username && formData.password) {
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o dashboard...",
-      });
-      setTimeout(() => navigate('/dashboard'), 1000);
-    } else {
+    
+    if (!formData.email || !formData.password) {
       toast({
         title: "Erro no login",
         description: "Por favor, preencha todos os campos.",
         variant: "destructive",
       });
+      return;
     }
+
+    setLoading(true);
+
+    const { error } = await signIn(formData.email, formData.password);
+
+    if (error) {
+      console.error('Login error:', error);
+      
+      let errorMessage = "Erro desconhecido. Tente novamente.";
+      
+      if (error.message === "Invalid login credentials") {
+        errorMessage = "Email ou senha incorretos.";
+      } else if (error.message === "Email not confirmed") {
+        errorMessage = "Confirme seu email antes de fazer login.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Erro no login",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Redirecionando para o dashboard...",
+      });
+      navigate('/dashboard');
+    }
+
+    setLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    
+    const { error } = await signInWithGoogle();
+    
+    if (error) {
+      console.error('Google login error:', error);
+      toast({
+        title: "Erro no login com Google",
+        description: error.message || "Erro desconhecido. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -48,11 +103,12 @@ const LoginForm = () => {
           <div className="relative">
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
-              type="text"
-              placeholder="Usuário"
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              type="email"
+              placeholder="E-mail"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
               className="pl-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              disabled={loading}
             />
           </div>
 
@@ -64,11 +120,13 @@ const LoginForm = () => {
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               className="pl-12 pr-12 py-6 text-lg border border-gray-300 rounded-full focus:ring-2 focus:ring-nutri-green-500 focus:border-nutri-green-500"
+              disabled={loading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              disabled={loading}
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
@@ -87,8 +145,9 @@ const LoginForm = () => {
             type="submit"
             className="w-full py-6 text-lg font-semibold text-white rounded-full"
             style={{ backgroundColor: 'rgb(37, 94, 57)' }}
+            disabled={loading}
           >
-            Entrar
+            {loading ? 'Entrando...' : 'Entrar'}
           </Button>
 
           <div className="text-center space-y-4">
@@ -98,6 +157,7 @@ const LoginForm = () => {
                 type="button"
                 onClick={() => navigate('/register')}
                 className="text-nutri-green-600 hover:text-nutri-green-700 font-semibold"
+                disabled={loading}
               >
                 Registre-se
               </button>
@@ -106,7 +166,9 @@ const LoginForm = () => {
             <Button
               type="button"
               variant="outline"
+              onClick={handleGoogleLogin}
               className="w-full py-6 text-lg border-2 border-gray-200 hover:border-nutri-green-500 rounded-full flex items-center justify-center"
+              disabled={loading}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -114,7 +176,7 @@ const LoginForm = () => {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continuar com o Google
+              {loading ? 'Conectando...' : 'Continuar com o Google'}
             </Button>
           </div>
         </form>
