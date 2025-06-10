@@ -1,8 +1,15 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { Menu, User, Utensils, History, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 const NutritionAnalysis = () => {
+  const navigate = useNavigate();
+  
   const nutritionData = [{
     name: 'Proteínas',
     value: 39.5,
@@ -19,10 +26,29 @@ const NutritionAnalysis = () => {
     calories: 400.7,
     color: '#18230F'
   }];
+
   const meals = [{
     time: "07:30 - Café da manhã",
     items: ["Ovo de galinha mexido - 2 unidades ou 90g", "Pão de forma integral - 2 fatias ou 50g", "Semente de chia - 1 colher de sopa cheia ou 15g"]
   }];
+
+  const handleMenuClick = (option: string) => {
+    switch (option) {
+      case 'profile':
+        navigate('/nutritional-profile');
+        break;
+      case 'plan':
+        navigate('/dashboard');
+        break;
+      case 'history':
+        console.log('Histórico');
+        break;
+      case 'settings':
+        console.log('Configurações');
+        break;
+    }
+  };
+
   return <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2 text-white">
@@ -69,9 +95,48 @@ const NutritionAnalysis = () => {
 
       <Card className="bg-gray-200 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-black">
-            Refeições
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-semibold text-black">
+              Refeições
+            </CardTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 hover:bg-gray-300 rounded-md transition-colors">
+                  <Menu className="w-5 h-5 text-nutri-dark-900" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48 bg-white shadow-lg z-50">
+                <DropdownMenuItem 
+                  onClick={() => handleMenuClick('profile')}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Perfil</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleMenuClick('plan')}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100"
+                >
+                  <Utensils className="w-4 h-4" />
+                  <span>Plano Alimentar</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleMenuClick('history')}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100"
+                >
+                  <History className="w-4 h-4" />
+                  <span>Histórico</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleMenuClick('settings')}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Configurações</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4 mb-6">
@@ -114,7 +179,7 @@ const NutritionAnalysis = () => {
               {meals[0].time}
               <button className="ml-2 text-gray-400 hover:text-gray-600">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m1 1 4 4 4-4" />
                 </svg>
               </button>
             </h3>
@@ -128,4 +193,5 @@ const NutritionAnalysis = () => {
       </Card>
     </div>;
 };
+
 export default NutritionAnalysis;
