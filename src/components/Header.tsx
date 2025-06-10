@@ -5,6 +5,7 @@ import { User, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -34,6 +35,15 @@ const Header = () => {
       });
       navigate('/');
     }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -84,9 +94,23 @@ const Header = () => {
         <div className="flex items-center space-x-4">
           {user ? (
             <>
-              <span className="text-sm text-nutri-green-400">
-                Olá, {user.user_metadata?.full_name || user.email}
-              </span>
+              <button
+                onClick={() => navigate('/profile')}
+                className="flex items-center space-x-2 hover:text-nutri-green-400 transition-colors"
+              >
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={user.user_metadata?.avatar_url} />
+                  <AvatarFallback className="bg-nutri-green-500 text-white text-sm">
+                    {user.user_metadata?.full_name ? 
+                      getInitials(user.user_metadata.full_name) : 
+                      <User className="w-4 h-4" />
+                    }
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-nutri-green-400 hidden sm:block">
+                  {user.user_metadata?.full_name || user.email}
+                </span>
+              </button>
               <Button 
                 variant="ghost" 
                 size="sm"
