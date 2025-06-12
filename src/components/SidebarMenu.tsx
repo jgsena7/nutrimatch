@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Home, User, Utensils, FileText } from 'lucide-react';
+import { Home, User, Utensils, FileText, Database } from 'lucide-react';
 
 const SidebarMenu = () => {
   const location = useLocation();
@@ -10,8 +10,9 @@ const SidebarMenu = () => {
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: User, label: 'Perfil', path: '/profile' },
-    { icon: Utensils, label: 'Perfil Nutricional', path: '/nutritional-profile-consolidated' },
-    { icon: FileText, label: 'Criar Perfil', path: '/nutritional-profile' },
+    { icon: Utensils, label: 'Perfil Nutricional', path: '/nutritional-profile' },
+    { icon: FileText, label: 'Visualizar Plano', path: '/nutritional-profile-view' },
+    { icon: Database, label: 'Base de Alimentos', path: '/food-database' },
   ];
 
   return (

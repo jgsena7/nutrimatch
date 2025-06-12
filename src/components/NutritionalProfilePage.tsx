@@ -3,11 +3,9 @@ import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Target, TrendingUp, Brain } from 'lucide-react';
+import { User, Target, TrendingUp } from 'lucide-react';
 import SidebarMenu from './SidebarMenu';
 import MealAccordion from './MealAccordion';
-import SmartMealPlanGenerator from './SmartMealPlanGenerator';
 
 const NutritionalProfilePage = () => {
   const { user } = useAuth();
@@ -66,7 +64,7 @@ const NutritionalProfilePage = () => {
       <SidebarMenu />
       
       <div className="pl-16 pr-6 py-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           {/* Header do Perfil */}
           <Card className="mb-8 bg-white/95 backdrop-blur-sm">
             <CardHeader>
@@ -135,29 +133,10 @@ const NutritionalProfilePage = () => {
             </Card>
           </div>
 
-          {/* Tabs para diferentes visualizações */}
+          {/* Accordion de Refeições */}
           <Card className="bg-white/95 backdrop-blur-sm">
             <CardContent className="p-6">
-              <Tabs defaultValue="current" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="current" className="flex items-center gap-2">
-                    <Target className="w-4 h-4" />
-                    Plano Atual
-                  </TabsTrigger>
-                  <TabsTrigger value="smart" className="flex items-center gap-2">
-                    <Brain className="w-4 h-4" />
-                    Gerador Inteligente
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="current">
-                  <MealAccordion meals={meals} />
-                </TabsContent>
-                
-                <TabsContent value="smart">
-                  <SmartMealPlanGenerator />
-                </TabsContent>
-              </Tabs>
+              <MealAccordion meals={meals} />
             </CardContent>
           </Card>
         </div>
