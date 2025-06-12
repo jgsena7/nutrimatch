@@ -27,7 +27,7 @@ const NutritionAnalysis = () => {
   }];
 
   const handleNavigateToProfile = () => {
-    navigate('/nutritional-profile');
+    navigate('/nutritional-profile-consolidated');
   };
 
   return <div className="max-w-4xl mx-auto space-y-6">

@@ -13,8 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import NutritionalProfile from "./pages/NutritionalProfile";
-import NutritionalProfileView from "./pages/NutritionalProfileView";
-import FoodDatabase from "./pages/FoodDatabase";
+import NutritionalProfileConsolidated from "./pages/NutritionalProfileConsolidated";
 
 const queryClient = new QueryClient();
 
@@ -44,14 +43,9 @@ const App = () => (
                 <NutritionalProfile />
               </ProtectedRoute>
             } />
-            <Route path="/nutritional-profile-view" element={
+            <Route path="/nutritional-profile-consolidated" element={
               <ProtectedRoute>
-                <NutritionalProfileView />
-              </ProtectedRoute>
-            } />
-            <Route path="/food-database" element={
-              <ProtectedRoute>
-                <FoodDatabase />
+                <NutritionalProfileConsolidated />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
