@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import NutritionalProfile from "./pages/NutritionalProfile";
 import NutritionalProfileView from "./pages/NutritionalProfileView";
+import FoodDatabase from "./pages/FoodDatabase";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,11 @@ const App = () => (
             <Route path="/nutritional-profile-view" element={
               <ProtectedRoute>
                 <NutritionalProfileView />
+              </ProtectedRoute>
+            } />
+            <Route path="/food-database" element={
+              <ProtectedRoute>
+                <FoodDatabase />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
