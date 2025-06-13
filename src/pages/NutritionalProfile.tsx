@@ -3,15 +3,15 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, Target, BarChart3, Database, Brain } from 'lucide-react';
+import { Menu, X, Target, BarChart3, Database, Brain } from 'lucide-react';
 import SidebarMenu from '@/components/SidebarMenu';
-import NutritionalProfile from '@/components/NutritionalProfile';
 import { MealPlanInterface } from '@/components/MealPlanInterface';
 import { ProgressReports } from '@/components/ProgressReports';
 import NutritionAnalysis from '@/components/NutritionAnalysis';
+import FoodDatabase from '@/components/FoodDatabase';
 
 const NutritionalProfilePage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('current-plan');
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   
   // Estado do perfil do usuário - pode ser obtido do contexto/state management
@@ -28,12 +28,6 @@ const NutritionalProfilePage = () => {
   });
 
   const menuItems = [
-    {
-      id: 'profile',
-      label: 'Perfil Nutricional',
-      icon: User,
-      description: 'Configure seus dados pessoais e metas'
-    },
     {
       id: 'current-plan',
       label: 'Plano Atual',
@@ -56,7 +50,7 @@ const NutritionalProfilePage = () => {
       id: 'food-database',
       label: 'Base de Alimentos',
       icon: Database,
-      description: 'Explore alimentos e suas informações nutricionais'
+      description: 'Busque informações nutricionais completas'
     }
   ];
 
@@ -95,7 +89,7 @@ const NutritionalProfilePage = () => {
           {/* Menu de Navegação Principal */}
           <Card className="mb-8 bg-white/95 backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {menuItems.map((item) => (
                   <Button
                     key={item.id}
@@ -131,14 +125,6 @@ const NutritionalProfilePage = () => {
 
           {/* Conteúdo Principal */}
           <div className="space-y-6">
-            {activeTab === 'profile' && (
-              <Card className="bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <NutritionalProfile />
-                </CardContent>
-              </Card>
-            )}
-
             {activeTab === 'current-plan' && (
               <Card className="bg-white/95 backdrop-blur-sm">
                 <CardContent className="p-6">
@@ -164,17 +150,7 @@ const NutritionalProfilePage = () => {
             {activeTab === 'food-database' && (
               <Card className="bg-white/95 backdrop-blur-sm">
                 <CardContent className="p-6">
-                  <div className="text-center py-12">
-                    <Database className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
-                    <h3 className="text-xl font-semibold mb-4">Base de Dados de Alimentos</h3>
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Explore nossa extensa base de dados com informações nutricionais 
-                      detalhadas de milhares de alimentos.
-                    </p>
-                    <Button className="bg-nutri-green-500 hover:bg-nutri-green-600">
-                      Acessar Base de Dados
-                    </Button>
-                  </div>
+                  <FoodDatabase />
                 </CardContent>
               </Card>
             )}
