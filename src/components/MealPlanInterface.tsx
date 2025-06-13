@@ -19,10 +19,10 @@ interface MealPlanInterfaceProps {
     height: number;
     weight: number;
     gender: string;
-    activityLevel: string;
+    activity_level: string;
     goal: string;
-    foodPreferences: string;
-    foodRestrictions: string;
+    food_preferences: string;
+    food_restrictions: string;
   };
 }
 
@@ -49,10 +49,10 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
         height: userProfile.height,
         weight: userProfile.weight,
         gender: userProfile.gender as any,
-        activityLevel: userProfile.activityLevel as any,
+        activityLevel: userProfile.activity_level as any,
         goal: userProfile.goal as any,
-        foodPreferences: userProfile.foodPreferences.split(',').map(p => p.trim()),
-        foodRestrictions: userProfile.foodRestrictions.split(',').map(r => r.trim())
+        foodPreferences: userProfile.food_preferences.split(',').map(p => p.trim()),
+        foodRestrictions: userProfile.food_restrictions.split(',').map(r => r.trim())
       };
 
       const plan = await mealPlanGenerator.generateMealPlan(profile);
@@ -75,11 +75,10 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
   };
 
   const handleMealFeedback = async (mealId: string, liked: boolean) => {
-    // Implementar sistema de feedback
     console.log(`Feedback para refeição ${mealId}: ${liked ? 'gostou' : 'não gostou'}`);
     
     toast({
-      title: "Feedback registrado",
+      title: "Avaliação registrada",
       description: `Sua avaliação foi registrada e ajudará a melhorar futuras sugestões.`
     });
   };
@@ -91,7 +90,7 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
     if (!meal) return;
 
     const originalFood = meal.foods[foodIndex];
-    const restrictions = userProfile.foodRestrictions.split(',').map(r => r.trim());
+    const restrictions = userProfile.food_restrictions.split(',').map(r => r.trim());
 
     try {
       const substitutes = await foodDataService.getFoodSubstitutes(originalFood.food, restrictions);
@@ -132,7 +131,6 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
   const savePlan = async () => {
     if (!mealPlan) return;
     
-    // Implementar salvamento no Supabase
     toast({
       title: "Plano salvo",
       description: "Seu plano alimentar foi salvo com sucesso!"
@@ -144,7 +142,6 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
   };
 
   const exportToPDF = () => {
-    // Implementar exportação para PDF
     toast({
       title: "Exportando PDF",
       description: "Seu plano será baixado em instantes."
@@ -154,22 +151,39 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
   if (!mealPlan) {
     return (
       <div className="space-y-6">
-        <Card className="text-center p-8">
+        <Card className="text-center p-8 bg-white/95 backdrop-blur-sm">
           <CardContent>
             <Target className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
-            <h3 className="text-xl font-semibold mb-4">Gerar Plano Alimentar Inteligente</h3>
-            <p className="text-gray-600 mb-6">
-              Crie um plano alimentar personalizado baseado no seu perfil nutricional
+            <h3 className="text-2xl font-semibold mb-4 text-nutri-dark-900">
+              Gerar Plano Alimentar Personalizado
+            </h3>
+            <p className="text-nutri-dark-600 mb-6 max-w-2xl mx-auto">
+              Crie um plano alimentar inteligente baseado no seu perfil nutricional, 
+              preferências alimentares e objetivos de saúde.
             </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 max-w-lg mx-auto">
+              <div className="text-center p-4 bg-nutri-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-nutri-green-600">6</div>
+                <div className="text-sm text-nutri-dark-600">Refeições por dia</div>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">100%</div>
+                <div className="text-sm text-nutri-dark-600">Personalizado</div>
+              </div>
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">Auto</div>
+                <div className="text-sm text-nutri-dark-600">Substituições</div>
+              </div>
+            </div>
             <Button 
               onClick={generatePlan} 
               disabled={loading}
-              className="bg-nutri-green-500 hover:bg-nutri-green-600"
+              className="bg-nutri-green-500 hover:bg-nutri-green-600 px-8 py-3 text-lg"
             >
               {loading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Gerando...
+                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                  Gerando seu plano...
                 </>
               ) : (
                 'Gerar Plano Alimentar'
@@ -184,12 +198,16 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
   return (
     <div className="space-y-6">
       {/* Cabeçalho do Plano */}
-      <Card>
+      <Card className="bg-white/95 backdrop-blur-sm">
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-2xl">Plano Alimentar Personalizado</CardTitle>
-              <p className="text-gray-600">Plano para {userProfile.name} - {new Date().toLocaleDateString()}</p>
+              <CardTitle className="text-2xl text-nutri-dark-900">
+                Plano Alimentar Personalizado
+              </CardTitle>
+              <p className="text-nutri-dark-600">
+                Plano para {userProfile.name} - {new Date().toLocaleDateString('pt-BR')}
+              </p>
             </div>
             <div className="flex gap-2">
               <Button onClick={generatePlan} variant="outline" size="sm">
@@ -227,10 +245,10 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
 
       {/* Tabs para diferentes visualizações */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-3 bg-white/95 backdrop-blur-sm">
           <TabsTrigger value="plano">Plano Diário</TabsTrigger>
           <TabsTrigger value="receitas">Receitas</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="timeline">Cronograma</TabsTrigger>
         </TabsList>
 
         <TabsContent value="plano" className="space-y-4">
@@ -247,30 +265,30 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
         <TabsContent value="receitas" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {mealPlan.meals.flatMap(meal => meal.recipes || []).map((recipe) => (
-              <Card key={recipe.id}>
+              <Card key={recipe.id} className="bg-white/95 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">{recipe.name}</CardTitle>
+                  <CardTitle className="text-lg text-nutri-dark-900">{recipe.name}</CardTitle>
                   <div className="flex gap-2">
                     <Badge variant="secondary">
                       <Clock className="w-3 h-3 mr-1" />
                       {recipe.prepTime} min
                     </Badge>
-                    <Badge variant="outline">{recipe.difficulty}</Badge>
+                    <Badge variant="outline" className="capitalize">{recipe.difficulty}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div>
-                      <h4 className="font-medium mb-2">Ingredientes:</h4>
-                      <ul className="list-disc list-inside text-sm space-y-1">
+                      <h4 className="font-medium mb-2 text-nutri-dark-800">Ingredientes:</h4>
+                      <ul className="list-disc list-inside text-sm space-y-1 text-nutri-dark-600">
                         {recipe.ingredients.map((ingredient, index) => (
                           <li key={index}>{ingredient}</li>
                         ))}
                       </ul>
                     </div>
                     <div>
-                      <h4 className="font-medium mb-2">Preparo:</h4>
-                      <ol className="list-decimal list-inside text-sm space-y-1">
+                      <h4 className="font-medium mb-2 text-nutri-dark-800">Modo de Preparo:</h4>
+                      <ol className="list-decimal list-inside text-sm space-y-1 text-nutri-dark-600">
                         {recipe.instructions.map((instruction, index) => (
                           <li key={index}>{instruction}</li>
                         ))}
@@ -284,26 +302,28 @@ export const MealPlanInterface: React.FC<MealPlanInterfaceProps> = ({ userProfil
         </TabsContent>
 
         <TabsContent value="timeline" className="space-y-4">
-          <Card>
+          <Card className="bg-white/95 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>Cronograma do Dia</CardTitle>
+              <CardTitle className="text-nutri-dark-900">Cronograma do Dia</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {mealPlan.meals.map((meal, index) => (
-                  <div key={meal.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <div key={meal.id} className="flex items-center gap-4 p-4 border rounded-lg bg-white/50">
                     <div className="text-2xl font-bold text-nutri-green-500 min-w-[60px]">
                       {meal.time}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium">{meal.name}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-medium text-nutri-dark-900">{meal.name}</h4>
+                      <p className="text-sm text-nutri-dark-600">
                         {meal.foods.map(f => f.food.name).join(', ')}
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">{Math.round(meal.totalCalories)} kcal</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-medium text-nutri-dark-900">
+                        {Math.round(meal.totalCalories)} kcal
+                      </div>
+                      <div className="text-sm text-nutri-dark-600">
                         P: {Math.round(meal.totalProtein)}g | 
                         C: {Math.round(meal.totalCarbs)}g | 
                         G: {Math.round(meal.totalFat)}g

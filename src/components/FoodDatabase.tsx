@@ -64,8 +64,7 @@ const FoodDatabase = () => {
         <Database className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
         <h3 className="text-2xl font-semibold mb-4 text-nutri-dark-900">Base de Dados de Alimentos</h3>
         <p className="text-nutri-dark-600 mb-6 max-w-2xl mx-auto">
-          Busque informações nutricionais completas de milhares de alimentos. 
-          Nossa base integra dados de fontes confiáveis como USDA e Open Food Facts.
+          Busque informações nutricionais completas de milhares de alimentos integrados de fontes confiáveis.
         </p>
       </div>
 
@@ -107,7 +106,7 @@ const FoodDatabase = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {searchResults.map((food, index) => (
                 <Dialog key={index} open={isDialogOpen && selectedFood?.id === food.id} onOpenChange={(open) => {
                   if (!open) {
@@ -117,20 +116,41 @@ const FoodDatabase = () => {
                 }}>
                   <DialogTrigger asChild>
                     <Card 
-                      className="cursor-pointer hover:shadow-lg transition-shadow hover:bg-nutri-green-50"
+                      className="cursor-pointer hover:shadow-lg transition-all hover:bg-nutri-green-50 overflow-hidden"
                       onClick={() => openFoodDetails(food)}
                     >
+                      <div className="aspect-square relative bg-gray-100">
+                        {food.image ? (
+                          <img 
+                            src={food.image} 
+                            alt={food.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-nutri-green-100">
+                            <Database className="w-12 h-12 text-nutri-green-500" />
+                          </div>
+                        )}
+                      </div>
                       <CardContent className="p-4">
-                        <h4 className="font-semibold text-nutri-dark-900 mb-2 line-clamp-2">
+                        <h4 className="font-semibold text-nutri-dark-900 mb-2 line-clamp-2 text-sm">
                           {food.name}
                         </h4>
-                        <div className="space-y-1 text-sm text-nutri-dark-600">
-                          <p><strong>Calorias:</strong> {food.calories} kcal/100g</p>
-                          <p><strong>Proteínas:</strong> {food.protein}g</p>
-                          <p><strong>Carboidratos:</strong> {food.carbs}g</p>
-                          <p><strong>Gorduras:</strong> {food.fat}g</p>
+                        <div className="space-y-1 text-xs text-nutri-dark-600">
+                          <p><strong>{food.calories}</strong> kcal/100g</p>
+                          <div className="flex justify-between">
+                            <span>Prot: {food.protein}g</span>
+                            <span>Carb: {food.carbs}g</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Gord: {food.fat}g</span>
+                            {food.fiber && <span>Fibra: {food.fiber}g</span>}
+                          </div>
                           {food.brand && (
-                            <p><strong>Marca:</strong> {food.brand}</p>
+                            <p className="text-xs text-nutri-green-600 truncate"><strong>{food.brand}</strong></p>
                           )}
                         </div>
                       </CardContent>
@@ -146,16 +166,34 @@ const FoodDatabase = () => {
                     
                     {selectedFood && (
                       <div className="space-y-6">
-                        <div>
-                          <h3 className="text-lg font-semibold text-nutri-dark-900 mb-2">
-                            {selectedFood.name}
-                          </h3>
-                          {selectedFood.brand && (
-                            <p className="text-nutri-dark-600"><strong>Marca:</strong> {selectedFood.brand}</p>
-                          )}
-                          {selectedFood.category && (
-                            <p className="text-nutri-dark-600"><strong>Categoria:</strong> {selectedFood.category}</p>
-                          )}
+                        <div className="flex gap-4">
+                          <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                            {selectedFood.image ? (
+                              <img 
+                                src={selectedFood.image} 
+                                alt={selectedFood.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=96&h=96&fit=crop&crop=center';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Database className="w-8 h-8 text-nutri-green-500" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-nutri-dark-900 mb-2">
+                              {selectedFood.name}
+                            </h3>
+                            {selectedFood.brand && (
+                              <p className="text-nutri-dark-600"><strong>Marca:</strong> {selectedFood.brand}</p>
+                            )}
+                            {selectedFood.category && (
+                              <p className="text-nutri-dark-600"><strong>Categoria:</strong> {selectedFood.category}</p>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

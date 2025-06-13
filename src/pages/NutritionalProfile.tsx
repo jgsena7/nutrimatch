@@ -1,38 +1,75 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Target, BarChart3, Database, Brain } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from "@/integrations/supabase/client";
 import SidebarMenu from '@/components/SidebarMenu';
 import { MealPlanInterface } from '@/components/MealPlanInterface';
 import { ProgressReports } from '@/components/ProgressReports';
-import NutritionAnalysis from '@/components/NutritionAnalysis';
 import FoodDatabase from '@/components/FoodDatabase';
+import { useToast } from "@/hooks/use-toast";
 
 const NutritionalProfilePage = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('current-plan');
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Estado do perfil do usuário - pode ser obtido do contexto/state management
-  const [userProfile, setUserProfile] = useState({
-    name: 'João Silva',
-    age: 30,
-    height: 175,
-    weight: 80,
-    gender: 'masculino',
-    activityLevel: 'moderado',
-    goal: 'emagrecimento',
-    foodPreferences: 'Carnes magras, vegetais, frutas',
-    foodRestrictions: 'Lactose, glúten'
-  });
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('nutritional_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Erro ao buscar perfil:', error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar seu perfil nutricional.",
+            variant: "destructive",
+          });
+        } else if (data) {
+          setUserProfile(data);
+        } else {
+          // Perfil padrão se não existir
+          setUserProfile({
+            name: user?.user_metadata?.full_name || user?.email || 'Usuário',
+            age: 30,
+            height: 175,
+            weight: 80,
+            gender: 'masculino',
+            activity_level: 'moderado',
+            goal: 'manutencao',
+            food_preferences: 'Carnes magras, vegetais, frutas',
+            food_restrictions: ''
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user, toast]);
 
   const menuItems = [
     {
       id: 'current-plan',
       label: 'Plano Atual',
       icon: Target,
-      description: 'Visualize seu plano alimentar atual'
+      description: 'Visualize seu plano alimentar personalizado'
     },
     {
       id: 'smart-generator',
@@ -50,11 +87,19 @@ const NutritionalProfilePage = () => {
       id: 'food-database',
       label: 'Base de Alimentos',
       icon: Database,
-      description: 'Busque informações nutricionais completas'
+      description: 'Busque informações nutricionais'
     }
   ];
 
   const currentMenuItem = menuItems.find(item => item.id === activeTab);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center">
+        <div className="text-white text-xl">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900">
@@ -125,15 +170,13 @@ const NutritionalProfilePage = () => {
 
           {/* Conteúdo Principal */}
           <div className="space-y-6">
-            {activeTab === 'current-plan' && (
-              <Card className="bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <NutritionAnalysis />
-                </CardContent>
-              </Card>
+            {activeTab === 'current-plan' && userProfile && (
+              <div className="space-y-6">
+                <MealPlanInterface userProfile={userProfile} />
+              </div>
             )}
 
-            {activeTab === 'smart-generator' && (
+            {activeTab === 'smart-generator' && userProfile && (
               <div className="space-y-6">
                 <MealPlanInterface userProfile={userProfile} />
               </div>
