@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Search, Database, Loader2 } from 'lucide-react';
+import { Search, Database, Loader2, MapPin } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { foodDataService, FoodItem } from '@/services/foodDataService';
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,6 +36,11 @@ const FoodDatabase = () => {
           title: "Nenhum resultado",
           description: "Não encontramos alimentos com esse nome. Tente uma busca diferente.",
         });
+      } else {
+        toast({
+          title: "Busca realizada",
+          description: `Encontrados ${results.length} alimentos. Dados de TBCA (USP) e Open Food Facts.`,
+        });
       }
     } catch (error) {
       toast({
@@ -58,13 +64,30 @@ const FoodDatabase = () => {
     setIsDialogOpen(true);
   };
 
+  const getSourceBadge = (source: string) => {
+    if (source === 'TBCA (USP)') {
+      return (
+        <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+          <MapPin className="w-3 h-3 mr-1" />
+          TBCA (USP)
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="secondary">
+        <Database className="w-3 h-3 mr-1" />
+        Open Food Facts
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <Database className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
         <h3 className="text-2xl font-semibold mb-4 text-nutri-dark-900">Base de Dados de Alimentos</h3>
         <p className="text-nutri-dark-600 mb-6 max-w-2xl mx-auto">
-          Busque informações nutricionais completas de milhares de alimentos integrados de fontes confiáveis.
+          Busque informações nutricionais completas de alimentos brasileiros (TBCA-USP) e internacionais (Open Food Facts).
         </p>
       </div>
 
@@ -74,7 +97,7 @@ const FoodDatabase = () => {
           <div className="flex space-x-4">
             <div className="flex-1">
               <Input
-                placeholder="Digite o nome do alimento (ex: banana, arroz integral, leite)"
+                placeholder="Digite o nome do alimento (ex: arroz, feijão, banana, frango)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -104,6 +127,9 @@ const FoodDatabase = () => {
             <CardTitle className="text-nutri-dark-900">
               Resultados da Busca ({searchResults.length} encontrados)
             </CardTitle>
+            <p className="text-sm text-nutri-dark-600">
+              Priorizamos alimentos brasileiros da TBCA (USP) e complementamos com dados internacionais.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -120,20 +146,17 @@ const FoodDatabase = () => {
                       onClick={() => openFoodDetails(food)}
                     >
                       <div className="aspect-square relative bg-gray-100">
-                        {food.image ? (
-                          <img 
-                            src={food.image} 
-                            alt={food.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-nutri-green-100">
-                            <Database className="w-12 h-12 text-nutri-green-500" />
-                          </div>
-                        )}
+                        <img 
+                          src={food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center'} 
+                          alt={food.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center';
+                          }}
+                        />
+                        <div className="absolute top-2 right-2">
+                          {getSourceBadge(food.source || 'Open Food Facts')}
+                        </div>
                       </div>
                       <CardContent className="p-4">
                         <h4 className="font-semibold text-nutri-dark-900 mb-2 line-clamp-2 text-sm">
@@ -152,6 +175,9 @@ const FoodDatabase = () => {
                           {food.brand && (
                             <p className="text-xs text-nutri-green-600 truncate"><strong>{food.brand}</strong></p>
                           )}
+                          {food.category && (
+                            <p className="text-xs text-gray-500">{food.category}</p>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -168,25 +194,22 @@ const FoodDatabase = () => {
                       <div className="space-y-6">
                         <div className="flex gap-4">
                           <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            {selectedFood.image ? (
-                              <img 
-                                src={selectedFood.image} 
-                                alt={selectedFood.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=96&h=96&fit=crop&crop=center';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Database className="w-8 h-8 text-nutri-green-500" />
-                              </div>
-                            )}
+                            <img 
+                              src={selectedFood.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=96&h=96&fit=crop&crop=center'} 
+                              alt={selectedFood.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=96&h=96&fit=crop&crop=center';
+                              }}
+                            />
                           </div>
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-nutri-dark-900 mb-2">
                               {selectedFood.name}
                             </h3>
+                            <div className="flex gap-2 mb-2">
+                              {getSourceBadge(selectedFood.source || 'Open Food Facts')}
+                            </div>
                             {selectedFood.brand && (
                               <p className="text-nutri-dark-600"><strong>Marca:</strong> {selectedFood.brand}</p>
                             )}
@@ -276,6 +299,22 @@ const FoodDatabase = () => {
                             <CardContent>
                               <p className="text-sm text-nutri-dark-600">
                                 {selectedFood.ingredients.join(', ')}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {selectedFood.source === 'TBCA (USP)' && (
+                          <Card className="bg-green-50 border-green-200">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-2 text-green-700">
+                                <MapPin className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                  Dados da Tabela Brasileira de Composição de Alimentos (TBCA-USP)
+                                </span>
+                              </div>
+                              <p className="text-xs text-green-600 mt-1">
+                                Fonte oficial brasileira para dados nutricionais.
                               </p>
                             </CardContent>
                           </Card>
