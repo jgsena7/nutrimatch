@@ -34,17 +34,28 @@ export const ProgressReports: React.FC = () => {
     setProgressData(mockData);
   }, []);
 
-  const currentData = progressData[progressData.length - 1] || {};
-  const previousData = progressData[progressData.length - 2] || {};
+  // Dados seguros com fallbacks para evitar erros
+  const currentData = progressData[progressData.length - 1] || {
+    weight: 0, bmi: 0, calories: 0, targetCalories: 0, adherence: 0, protein: 0, carbs: 0, fat: 0
+  };
+  const previousData = progressData[progressData.length - 2] || {
+    weight: 0, bmi: 0, calories: 0, targetCalories: 0, adherence: 0, protein: 0, carbs: 0, fat: 0
+  };
 
   const weightChange = currentData.weight - previousData.weight;
-  const adherenceAvg = progressData.reduce((sum, data) => sum + data.adherence, 0) / progressData.length;
+  const adherenceAvg = progressData.length > 0 
+    ? progressData.reduce((sum, data) => sum + data.adherence, 0) / progressData.length 
+    : 0;
 
   const nutritionData = [
-    { name: 'Proteínas', value: currentData.protein || 0, color: '#8884d8' },
-    { name: 'Carboidratos', value: currentData.carbs || 0, color: '#82ca9d' },
-    { name: 'Gorduras', value: currentData.fat || 0, color: '#ffc658' }
+    { name: 'Proteínas', value: currentData.protein, color: '#8884d8' },
+    { name: 'Carboidratos', value: currentData.carbs, color: '#82ca9d' },
+    { name: 'Gorduras', value: currentData.fat, color: '#ffc658' }
   ];
+
+  const averageCalories = progressData.length > 0 
+    ? Math.round(progressData.reduce((sum, data) => sum + data.calories, 0) / progressData.length)
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -57,7 +68,7 @@ export const ProgressReports: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Mudança de Peso</p>
                 <p className="text-2xl font-bold">
-                  {weightChange > 0 ? '+' : ''}{weightChange?.toFixed(1)} kg
+                  {weightChange > 0 ? '+' : ''}{weightChange.toFixed(1)} kg
                 </p>
                 <Badge variant={weightChange < 0 ? 'default' : 'secondary'}>
                   {weightChange < 0 ? 'Perdendo' : 'Ganhando'}
@@ -73,7 +84,7 @@ export const ProgressReports: React.FC = () => {
               <Target className="w-5 h-5 text-green-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">IMC Atual</p>
-                <p className="text-2xl font-bold">{currentData.bmi?.toFixed(1)}</p>
+                <p className="text-2xl font-bold">{currentData.bmi.toFixed(1)}</p>
                 <Badge variant="outline">Normal</Badge>
               </div>
             </div>
@@ -86,7 +97,7 @@ export const ProgressReports: React.FC = () => {
               <Calendar className="w-5 h-5 text-orange-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Aderência Média</p>
-                <p className="text-2xl font-bold">{adherenceAvg?.toFixed(0)}%</p>
+                <p className="text-2xl font-bold">{adherenceAvg.toFixed(0)}%</p>
                 <Badge variant={adherenceAvg > 85 ? 'default' : 'secondary'}>
                   {adherenceAvg > 85 ? 'Excelente' : 'Bom'}
                 </Badge>
@@ -101,9 +112,7 @@ export const ProgressReports: React.FC = () => {
               <Award className="w-5 h-5 text-purple-500" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Calorias Média</p>
-                <p className="text-2xl font-bold">
-                  {Math.round(progressData.reduce((sum, data) => sum + data.calories, 0) / progressData.length)}
-                </p>
+                <p className="text-2xl font-bold">{averageCalories}</p>
                 <Badge variant="outline">kcal/dia</Badge>
               </div>
             </div>
