@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, Database, Loader2, MapPin } from 'lucide-react';
+import { Search, Database, Loader2, MapPin, Star } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,12 +34,12 @@ const FoodDatabase = () => {
       if (results.length === 0) {
         toast({
           title: "Nenhum resultado",
-          description: "Não encontramos alimentos com esse nome. Tente uma busca diferente.",
+          description: "Não encontramos alimentos com informações completas para essa busca. Tente termos diferentes.",
         });
       } else {
         toast({
           title: "Busca realizada",
-          description: `Encontrados ${results.length} alimentos. Dados de TBCA (USP) e Open Food Facts.`,
+          description: `Encontrados ${results.length} alimentos com dados verificados de TBCA (USP) e Open Food Facts.`,
         });
       }
     } catch (error) {
@@ -81,13 +81,34 @@ const FoodDatabase = () => {
     );
   };
 
+  const getRatingStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />);
+    }
+    
+    if (hasHalfStar) {
+      stars.push(<Star key="half" className="w-3 h-3 fill-yellow-400/50 text-yellow-400" />);
+    }
+    
+    return <div className="flex">{stars}</div>;
+  };
+
+  const formatNutritionalValue = (value: number | undefined): string => {
+    if (value === undefined || value === null) return '-';
+    return value.toFixed(1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <Database className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
         <h3 className="text-2xl font-semibold mb-4 text-nutri-dark-900">Base de Dados de Alimentos</h3>
         <p className="text-nutri-dark-600 mb-6 max-w-2xl mx-auto">
-          Busque informações nutricionais completas de alimentos brasileiros (TBCA-USP) e internacionais (Open Food Facts).
+          Busque informações nutricionais completas e verificadas de alimentos brasileiros (TBCA-USP) e internacionais (Open Food Facts).
         </p>
       </div>
 
@@ -125,16 +146,16 @@ const FoodDatabase = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-nutri-dark-900">
-              Resultados da Busca ({searchResults.length} encontrados)
+              Resultados Verificados ({searchResults.length} encontrados)
             </CardTitle>
             <p className="text-sm text-nutri-dark-600">
-              Priorizamos alimentos brasileiros da TBCA (USP) e complementamos com dados internacionais.
+              Mostrando apenas alimentos com dados nutricionais completos e verificados. Ordenados por qualidade da informação.
             </p>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {searchResults.map((food, index) => (
-                <Dialog key={index} open={isDialogOpen && selectedFood?.id === food.id} onOpenChange={(open) => {
+                <Dialog key={`${food.id}-${index}`} open={isDialogOpen && selectedFood?.id === food.id} onOpenChange={(open) => {
                   if (!open) {
                     setIsDialogOpen(false);
                     setSelectedFood(null);
@@ -157,20 +178,25 @@ const FoodDatabase = () => {
                         <div className="absolute top-2 right-2">
                           {getSourceBadge(food.source || 'Open Food Facts')}
                         </div>
+                        {food.rating && (
+                          <div className="absolute top-2 left-2 bg-white/90 rounded px-2 py-1">
+                            {getRatingStars(food.rating)}
+                          </div>
+                        )}
                       </div>
                       <CardContent className="p-4">
                         <h4 className="font-semibold text-nutri-dark-900 mb-2 line-clamp-2 text-sm">
                           {food.name}
                         </h4>
                         <div className="space-y-1 text-xs text-nutri-dark-600">
-                          <p><strong>{food.calories}</strong> kcal/100g</p>
+                          <p><strong>{formatNutritionalValue(food.calories)}</strong> kcal/100g</p>
                           <div className="flex justify-between">
-                            <span>Prot: {food.protein}g</span>
-                            <span>Carb: {food.carbs}g</span>
+                            <span>Proteínas: {formatNutritionalValue(food.protein)}g</span>
+                            <span>Carboidratos: {formatNutritionalValue(food.carbs)}g</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Gord: {food.fat}g</span>
-                            {food.fiber && <span>Fibra: {food.fiber}g</span>}
+                            <span>Gorduras: {formatNutritionalValue(food.fat)}g</span>
+                            {food.fiber && <span>Fibras: {formatNutritionalValue(food.fiber)}g</span>}
                           </div>
                           {food.brand && (
                             <p className="text-xs text-nutri-green-600 truncate"><strong>{food.brand}</strong></p>
@@ -209,6 +235,12 @@ const FoodDatabase = () => {
                             </h3>
                             <div className="flex gap-2 mb-2">
                               {getSourceBadge(selectedFood.source || 'Open Food Facts')}
+                              {selectedFood.rating && (
+                                <div className="flex items-center gap-1">
+                                  {getRatingStars(selectedFood.rating)}
+                                  <span className="text-xs text-gray-600">({selectedFood.rating.toFixed(1)})</span>
+                                </div>
+                              )}
                             </div>
                             {selectedFood.brand && (
                               <p className="text-nutri-dark-600"><strong>Marca:</strong> {selectedFood.brand}</p>
@@ -227,19 +259,19 @@ const FoodDatabase = () => {
                             <CardContent className="space-y-2">
                               <div className="flex justify-between">
                                 <span>Calorias:</span>
-                                <span className="font-semibold">{selectedFood.calories} kcal</span>
+                                <span className="font-semibold">{formatNutritionalValue(selectedFood.calories)} kcal</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Proteínas:</span>
-                                <span className="font-semibold">{selectedFood.protein}g</span>
+                                <span className="font-semibold">{formatNutritionalValue(selectedFood.protein)}g</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Carboidratos:</span>
-                                <span className="font-semibold">{selectedFood.carbs}g</span>
+                                <span className="font-semibold">{formatNutritionalValue(selectedFood.carbs)}g</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Gorduras:</span>
-                                <span className="font-semibold">{selectedFood.fat}g</span>
+                                <span className="font-semibold">{formatNutritionalValue(selectedFood.fat)}g</span>
                               </div>
                             </CardContent>
                           </Card>
@@ -252,20 +284,23 @@ const FoodDatabase = () => {
                               {selectedFood.fiber && (
                                 <div className="flex justify-between">
                                   <span>Fibras:</span>
-                                  <span className="font-semibold">{selectedFood.fiber}g</span>
+                                  <span className="font-semibold">{formatNutritionalValue(selectedFood.fiber)}g</span>
                                 </div>
                               )}
                               {selectedFood.sugar && (
                                 <div className="flex justify-between">
                                   <span>Açúcares:</span>
-                                  <span className="font-semibold">{selectedFood.sugar}g</span>
+                                  <span className="font-semibold">{formatNutritionalValue(selectedFood.sugar)}g</span>
                                 </div>
                               )}
                               {selectedFood.sodium && (
                                 <div className="flex justify-between">
                                   <span>Sódio:</span>
-                                  <span className="font-semibold">{selectedFood.sodium}mg</span>
+                                  <span className="font-semibold">{Math.round(selectedFood.sodium)}mg</span>
                                 </div>
+                              )}
+                              {(!selectedFood.fiber && !selectedFood.sugar && !selectedFood.sodium) && (
+                                <p className="text-sm text-gray-500">Dados adicionais não disponíveis</p>
                               )}
                             </CardContent>
                           </Card>
@@ -294,7 +329,7 @@ const FoodDatabase = () => {
                         {selectedFood.ingredients && selectedFood.ingredients.length > 0 && (
                           <Card>
                             <CardHeader className="pb-2">
-                              <CardTitle className="text-sm text-nutri-dark-700">Ingredientes</CardTitle>
+                              <CardTitle className="text-sm text-nutri-dark-700">Lista de Ingredientes</CardTitle>
                             </CardHeader>
                             <CardContent>
                               <p className="text-sm text-nutri-dark-600">
@@ -310,11 +345,11 @@ const FoodDatabase = () => {
                               <div className="flex items-center gap-2 text-green-700">
                                 <MapPin className="w-4 h-4" />
                                 <span className="text-sm font-medium">
-                                  Dados da Tabela Brasileira de Composição de Alimentos (TBCA-USP)
+                                  Dados Verificados da Tabela Brasileira de Composição de Alimentos (TBCA-USP)
                                 </span>
                               </div>
                               <p className="text-xs text-green-600 mt-1">
-                                Fonte oficial brasileira para dados nutricionais.
+                                Fonte oficial brasileira para dados nutricionais - Máxima confiabilidade.
                               </p>
                             </CardContent>
                           </Card>
