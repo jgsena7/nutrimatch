@@ -7,11 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { Clock, Users, Target, Utensils, ThumbsUp, ThumbsDown, RefreshCw, ChefHat } from 'lucide-react';
 import { foodDataService, FoodItem } from '@/services/foodDataService';
 import { NutritionalCalculator, UserProfile, NutritionalNeeds } from '@/services/nutritionalCalculator';
+import { mealPlanCache } from '@/services/mealPlanCache';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
 
 interface MealFood {
   food: FoodItem;
-  quantity: number; // em gramas
+  quantity: number;
   calories: number;
   protein: number;
   carbs: number;
@@ -35,6 +37,7 @@ interface MealPlanGeneratorProps {
 }
 
 const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) => {
+  const { user } = useAuth();
   const [nutritionalNeeds, setNutritionalNeeds] = useState<NutritionalNeeds | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -42,16 +45,47 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
   const { toast } = useToast();
 
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && user) {
       const needs = NutritionalCalculator.calculateNutritionalNeeds(userProfile);
       setNutritionalNeeds(needs);
-      generateMealPlan(needs);
+      loadMealPlan(needs);
     }
-  }, [userProfile]);
+  }, [userProfile, user]);
 
-  const generateMealPlan = async (needs: NutritionalNeeds) => {
-    setIsGenerating(true);
+  const loadMealPlan = async (needs: NutritionalNeeds) => {
+    if (!user) return;
+    
     setIsLoading(true);
+    
+    try {
+      // Tentar carregar do cache primeiro
+      const cachedPlan = mealPlanCache.getMealPlan(user.id, userProfile);
+      
+      if (cachedPlan && cachedPlan.meals) {
+        console.log('Carregando plano do cache...');
+        setMeals(cachedPlan.meals);
+        setIsLoading(false);
+        
+        toast({
+          title: "Plano carregado!",
+          description: "Seu plano alimentar foi carregado do cache.",
+        });
+        return;
+      }
+      
+      // Se não há cache, gerar novo plano
+      await generateMealPlan(needs, true);
+      
+    } catch (error) {
+      console.error('Erro ao carregar plano:', error);
+      await generateMealPlan(needs, true);
+    }
+  };
+
+  const generateMealPlan = async (needs: NutritionalNeeds, isInitialLoad: boolean = false) => {
+    if (!isInitialLoad) {
+      setIsGenerating(true);
+    }
     
     try {
       const mealCalories = NutritionalCalculator.distributeMealCalories(needs.calories);
@@ -60,7 +94,8 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       
       const generatedMeals: Meal[] = [];
 
-      for (const [mealId, targetCalories] of Object.entries(mealCalories)) {
+      // Gerar todas as refeições em paralelo para maior velocidade
+      const mealPromises = Object.entries(mealCalories).map(async ([mealId, targetCalories]) => {
         const meal: Meal = {
           id: mealId,
           name: mealNames[mealId],
@@ -83,14 +118,28 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         meal.totalCarbs = mealFoods.reduce((sum, food) => sum + food.carbs, 0);
         meal.totalFat = mealFoods.reduce((sum, food) => sum + food.fat, 0);
 
-        generatedMeals.push(meal);
-      }
+        return meal;
+      });
 
-      setMeals(generatedMeals);
+      // Aguardar todas as refeições serem geradas
+      const allMeals = await Promise.all(mealPromises);
+      
+      // Ordenar as refeições na ordem correta
+      const mealOrder = ['cafe-da-manha', 'lanche-manha', 'almoco', 'lanche-tarde', 'jantar', 'ceia'];
+      const orderedMeals = mealOrder.map(mealId => 
+        allMeals.find(meal => meal.id === mealId)
+      ).filter(Boolean) as Meal[];
+
+      setMeals(orderedMeals);
+      
+      // Salvar no cache se há usuário
+      if (user) {
+        mealPlanCache.saveMealPlan(user.id, userProfile, { meals: orderedMeals });
+      }
       
       toast({
         title: "Plano gerado com sucesso!",
-        description: `Criado plano personalizado com ${needs.calories} kcal/dia`,
+        description: `Criado plano personalizado com ${needs.calories} kcal/dia usando TBCA-USP`,
       });
 
     } catch (error) {
@@ -109,18 +158,19 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
   const generateMealFoods = async (mealId: string, targetCalories: number, profile: UserProfile): Promise<MealFood[]> => {
     const mealFoods: MealFood[] = [];
     
-    // Definir tipos de alimentos por refeição
+    // Definir tipos de alimentos por refeição otimizados para TBCA-USP
     const mealFoodTypes = getMealFoodTypes(mealId);
     const restrictions = profile.food_restrictions?.toLowerCase().split(',').map(r => r.trim()) || [];
     
     let remainingCalories = targetCalories;
 
-    for (const foodType of mealFoodTypes) {
-      if (remainingCalories <= 50) break; // Parar se restarem poucas calorias
+    // Processar alimentos em paralelo quando possível
+    const foodPromises = mealFoodTypes.map(async (foodType) => {
+      if (remainingCalories <= 50) return null;
       
       try {
-        // Buscar alimentos deste tipo
-        const searchResults = await foodDataService.searchFoods(foodType.query, 10);
+        // Buscar alimentos deste tipo apenas da TBCA
+        const searchResults = await foodDataService.searchFoods(foodType.query, 5);
         
         // Filtrar alimentos com restrições
         const filteredFoods = searchResults.filter(food => {
@@ -131,10 +181,10 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         });
 
         if (filteredFoods.length > 0) {
-          const selectedFood = filteredFoods[0]; // Selecionar o primeiro alimento válido
+          const selectedFood = filteredFoods[0];
           const targetCaloriesForFood = Math.min(remainingCalories, foodType.maxCalories);
           
-          // Calcular quantidade em gramas para atingir as calorias desejadas
+          // Calcular quantidade em gramas
           const quantity = Math.round((targetCaloriesForFood / selectedFood.calories) * 100);
           
           if (quantity > 0) {
@@ -143,57 +193,58 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
             const actualCarbs = Math.round((quantity / 100) * selectedFood.carbs * 10) / 10;
             const actualFat = Math.round((quantity / 100) * selectedFood.fat * 10) / 10;
 
-            mealFoods.push({
+            remainingCalories -= actualCalories;
+
+            return {
               food: selectedFood,
               quantity,
               calories: actualCalories,
               protein: actualProtein,
               carbs: actualCarbs,
               fat: actualFat
-            });
-
-            remainingCalories -= actualCalories;
+            };
           }
         }
       } catch (error) {
         console.error(`Erro ao buscar ${foodType.query}:`, error);
       }
-    }
+      
+      return null;
+    });
 
-    return mealFoods;
+    const results = await Promise.all(foodPromises);
+    return results.filter(Boolean) as MealFood[];
   };
 
   const getMealFoodTypes = (mealId: string) => {
     const foodTypes = {
       'cafe-da-manha': [
-        { query: 'pão integral', maxCalories: 150 },
+        { query: 'pão', maxCalories: 150 },
         { query: 'ovo', maxCalories: 100 },
         { query: 'banana', maxCalories: 80 },
         { query: 'leite', maxCalories: 100 }
       ],
       'lanche-manha': [
-        { query: 'fruta', maxCalories: 60 },
-        { query: 'iogurte', maxCalories: 80 }
+        { query: 'banana', maxCalories: 60 },
+        { query: 'açaí', maxCalories: 80 }
       ],
       'almoco': [
-        { query: 'arroz integral', maxCalories: 150 },
+        { query: 'arroz', maxCalories: 150 },
         { query: 'feijão', maxCalories: 100 },
         { query: 'frango', maxCalories: 200 },
-        { query: 'salada', maxCalories: 50 },
-        { query: 'azeite', maxCalories: 50 }
+        { query: 'tomate', maxCalories: 50 }
       ],
       'lanche-tarde': [
-        { query: 'castanha', maxCalories: 80 },
-        { query: 'fruta', maxCalories: 60 }
+        { query: 'banana', maxCalories: 80 },
+        { query: 'açaí', maxCalories: 60 }
       ],
       'jantar': [
-        { query: 'peixe', maxCalories: 150 },
-        { query: 'batata doce', maxCalories: 120 },
-        { query: 'brócolis', maxCalories: 40 },
-        { query: 'azeite', maxCalories: 40 }
+        { query: 'frango', maxCalories: 150 },
+        { query: 'batata', maxCalories: 120 },
+        { query: 'alface', maxCalories: 40 }
       ],
       'ceia': [
-        { query: 'iogurte natural', maxCalories: 80 }
+        { query: 'leite', maxCalories: 80 }
       ]
     };
 
@@ -202,6 +253,10 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
 
   const regeneratePlan = () => {
     if (nutritionalNeeds) {
+      // Limpar cache antes de regenerar
+      if (user) {
+        mealPlanCache.clearUserCache(user.id);
+      }
       generateMealPlan(nutritionalNeeds);
     }
   };
@@ -219,8 +274,8 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         <Card>
           <CardContent className="p-8 text-center">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-nutri-green-500" />
-            <h3 className="text-lg font-semibold mb-2">Gerando seu plano personalizado...</h3>
-            <p className="text-gray-600">Analisando suas necessidades nutricionais e selecionando os melhores alimentos.</p>
+            <h3 className="text-lg font-semibold mb-2">Carregando seu plano personalizado...</h3>
+            <p className="text-gray-600">Buscando alimentos brasileiros da TBCA-USP.</p>
           </CardContent>
         </Card>
       </div>
@@ -320,7 +375,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                       <div>
                         <h4 className="font-medium">{mealFood.food.name}</h4>
                         <p className="text-sm text-gray-600">
-                          {formatQuantity(mealFood.quantity)} • {mealFood.calories} kcal
+                          {formatQuantity(mealFood.quantity)} • {mealFood.calories} kcal • TBCA-USP
                         </p>
                       </div>
                     </div>
@@ -362,10 +417,6 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                 </div>
 
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <ChefHat className="w-4 h-4" />
-                    Receitas
-                  </Button>
                   <Button size="sm" variant="outline" className="gap-2">
                     <ThumbsUp className="w-4 h-4" />
                   </Button>
