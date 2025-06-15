@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,10 +23,13 @@ const NutritionalProfilePage = () => {
       if (!user) return;
       
       try {
+        // Buscar o perfil mais recente do usuário
         const { data, error } = await supabase
           .from('nutritional_profiles')
           .select('*')
           .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (error) {

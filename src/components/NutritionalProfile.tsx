@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,25 +67,38 @@ const NutritionalProfile = () => {
         food_restrictions: formData.foodRestrictions.trim() || null
       };
 
-      // Verificar se já existe um perfil para este usuário
-      const { data: existingProfile, error: checkError } = await supabase
+      // Buscar todos os perfis do usuário
+      const { data: existingProfiles, error: checkError } = await supabase
         .from('nutritional_profiles')
         .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .eq('user_id', user.id);
 
       if (checkError) {
-        console.error('Erro ao verificar perfil existente:', checkError);
+        console.error('Erro ao verificar perfis existentes:', checkError);
         throw checkError;
       }
 
       let result;
-      if (existingProfile) {
-        // Atualizar perfil existente
+      if (existingProfiles && existingProfiles.length > 0) {
+        // Se existem perfis, pegar o mais recente e atualizar
+        const { data: latestProfile, error: latestError } = await supabase
+          .from('nutritional_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestError) {
+          console.error('Erro ao buscar perfil mais recente:', latestError);
+          throw latestError;
+        }
+
+        // Atualizar o perfil mais recente
         result = await supabase
           .from('nutritional_profiles')
           .update(profileData)
-          .eq('user_id', user.id);
+          .eq('id', latestProfile.id);
       } else {
         // Criar novo perfil
         result = await supabase
