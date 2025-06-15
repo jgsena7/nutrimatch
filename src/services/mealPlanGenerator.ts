@@ -1,4 +1,3 @@
-
 import { foodDataService, FoodItem } from './foodDataService';
 
 export interface UserProfile {
@@ -134,14 +133,43 @@ class MealPlanGenerator {
     const meals: Meal[] = [];
 
     for (const [mealType, percentage] of Object.entries(mealDistribution)) {
-      const mealCalories = targetCalories * percentage;
-      const meal = await this.generateMeal(
-        mealType as Meal['type'],
-        mealCalories,
-        macros,
-        percentage,
-        profile
-      );
+      console.log(`Gerando refeição: ${mealType}`);
+      let meal: Meal | null = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      // Tentar gerar a refeição até 3 vezes
+      while (!meal && attempts < maxAttempts) {
+        attempts++;
+        console.log(`Tentativa ${attempts} para ${mealType}`);
+        
+        try {
+          const mealCalories = targetCalories * percentage;
+          meal = await this.generateMeal(
+            mealType as Meal['type'],
+            mealCalories,
+            macros,
+            percentage,
+            profile
+          );
+          
+          // Verificar se a refeição tem pelo menos um alimento
+          if (!meal.foods || meal.foods.length === 0) {
+            console.log(`Refeição ${mealType} vazia, tentando novamente...`);
+            meal = null;
+          }
+        } catch (error) {
+          console.error(`Erro na tentativa ${attempts} para ${mealType}:`, error);
+          meal = null;
+        }
+      }
+
+      // Se ainda não conseguiu gerar, criar uma refeição básica
+      if (!meal) {
+        console.log(`Gerando refeição básica para ${mealType}`);
+        meal = await this.generateBasicMeal(mealType as Meal['type'], targetCalories * percentage);
+      }
+
       meals.push(meal);
     }
 
@@ -174,7 +202,16 @@ class MealPlanGenerator {
     let remainingCalories = targetCalories;
 
     for (const foodCategory of selectedTemplate.categories) {
-      const searchResults = await foodDataService.searchFoods(foodCategory, 10);
+      console.log(`Buscando alimentos para categoria: ${foodCategory}`);
+      
+      // Tentar diferentes termos de busca se o primeiro não funcionar
+      const searchTerms = [foodCategory, this.getAlternativeSearchTerm(foodCategory)];
+      let searchResults: FoodItem[] = [];
+      
+      for (const searchTerm of searchTerms) {
+        searchResults = await foodDataService.searchFoods(searchTerm, 15);
+        if (searchResults.length > 0) break;
+      }
       
       // Filtra alimentos com base nas restrições
       const filteredFoods = this.filterFoodsByRestrictions(searchResults, profile.foodRestrictions);
@@ -194,6 +231,9 @@ class MealPlanGenerator {
 
         foods.push(mealFood);
         remainingCalories -= mealFood.calories;
+        console.log(`Adicionado: ${selectedFood.name} (${mealFood.calories} kcal)`);
+      } else {
+        console.log(`Nenhum alimento encontrado para categoria: ${foodCategory}`);
       }
     }
 
@@ -209,6 +249,87 @@ class MealPlanGenerator {
       ...mealNutrition,
       recipes
     };
+  }
+
+  private async generateBasicMeal(type: Meal['type'], targetCalories: number): Promise<Meal> {
+    console.log(`Gerando refeição básica para ${type}`);
+    
+    // Termos básicos que sempre devem funcionar
+    const basicTerms = ['banana', 'arroz', 'frango', 'leite', 'pão'];
+    const foods: MealFood[] = [];
+    
+    for (const term of basicTerms.slice(0, 2)) { // Pegar apenas 2 alimentos básicos
+      const searchResults = await foodDataService.searchFoods(term, 5);
+      
+      if (searchResults.length > 0) {
+        const selectedFood = searchResults[0];
+        const quantity = this.calculateOptimalQuantity(selectedFood, targetCalories * 0.5);
+        
+        const mealFood: MealFood = {
+          food: selectedFood,
+          quantity,
+          calories: (selectedFood.calories * quantity) / 100,
+          protein: (selectedFood.protein * quantity) / 100,
+          carbs: (selectedFood.carbs * quantity) / 100,
+          fat: (selectedFood.fat * quantity) / 100
+        };
+
+        foods.push(mealFood);
+        console.log(`Adicionado alimento básico: ${selectedFood.name}`);
+      }
+    }
+
+    const mealNutrition = this.calculateMealNutrition(foods);
+
+    return {
+      id: crypto.randomUUID(),
+      type,
+      name: this.getMealName(type),
+      time: this.getMealTime(type),
+      foods,
+      ...mealNutrition,
+      recipes: []
+    };
+  }
+
+  private getAlternativeSearchTerm(category: string): string {
+    const alternatives: { [key: string]: string } = {
+      'pão integral': 'pão',
+      'frutas': 'banana',
+      'café': 'café',
+      'leite': 'leite',
+      'aveia': 'aveia',
+      'iogurte': 'iogurte',
+      'mel': 'mel',
+      'ovos': 'ovo',
+      'torradas': 'pão',
+      'abacate': 'abacate',
+      'suco': 'laranja',
+      'castanhas': 'castanha',
+      'granola': 'granola',
+      'arroz integral': 'arroz',
+      'feijão': 'feijão',
+      'frango grelhado': 'frango',
+      'salada': 'alface',
+      'macarrão integral': 'macarrão',
+      'molho de tomate': 'tomate',
+      'carne magra': 'carne',
+      'legumes': 'cenoura',
+      'quinoa': 'quinoa',
+      'salmão': 'peixe',
+      'brócolis': 'brócolis',
+      'batata doce': 'batata',
+      'vitamina': 'leite',
+      'peixe grelhado': 'peixe',
+      'salada verde': 'alface',
+      'aspargos': 'aspargo',
+      'tofu': 'soja',
+      'vegetais': 'cenoura',
+      'chá': 'chá',
+      'biscoito integral': 'biscoito'
+    };
+    
+    return alternatives[category] || category;
   }
 
   private getMealTemplates(type: Meal['type']) {

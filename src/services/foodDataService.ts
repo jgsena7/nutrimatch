@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface FoodItem {
@@ -23,11 +22,24 @@ export interface FoodItem {
 class FoodDataService {
   async searchFoods(query: string, maxResults: number = 20): Promise<FoodItem[]> {
     try {
-      // Usar apenas TBCA-USP para maior velocidade e dados brasileiros
-      const tbcaResults = await this.searchTBCA(query, maxResults);
+      console.log(`Buscando alimentos para: "${query}"`);
+      
+      // Buscar em ambas as APIs simultaneamente
+      const [tbcaResults, openFoodResults] = await Promise.all([
+        this.searchTBCA(query, Math.ceil(maxResults / 2)),
+        this.searchOpenFood(query, Math.ceil(maxResults / 2))
+      ]);
+      
+      console.log(`TBCA encontrou ${tbcaResults.length} alimentos`);
+      console.log(`Open Food Facts encontrou ${openFoodResults.length} alimentos`);
+      
+      // Combinar resultados das duas APIs
+      const combinedResults = [...tbcaResults, ...openFoodResults];
       
       // Filtrar e validar dados
-      const filteredResults = this.filterAndValidateFoods(tbcaResults);
+      const filteredResults = this.filterAndValidateFoods(combinedResults);
+      
+      console.log(`Total de alimentos válidos: ${filteredResults.length}`);
       
       return filteredResults.slice(0, maxResults);
     } catch (error) {
@@ -177,12 +189,38 @@ class FoodDataService {
       const foodsWithImagesAndRating = (data?.foods || []).map((food: FoodItem) => ({
         ...food,
         image: this.getDefaultBrazilianFoodImage(food.name),
-        rating: 5 // TBCA tem dados de alta qualidade
+        rating: 5, // TBCA tem dados de alta qualidade
+        source: 'TBCA-USP'
       }));
       
       return foodsWithImagesAndRating;
     } catch (error) {
       console.error('Erro TBCA API:', error);
+      return [];
+    }
+  }
+
+  private async searchOpenFood(query: string, maxResults: number): Promise<FoodItem[]> {
+    try {
+      const { data, error } = await supabase.functions.invoke('search-food-openfoodfacts', {
+        body: { query, maxResults }
+      });
+
+      if (error) {
+        console.error('Erro Open Food Facts API:', error);
+        return [];
+      }
+      
+      // Processar resultados do Open Food Facts
+      const foodsWithRating = (data?.foods || []).map((food: FoodItem) => ({
+        ...food,
+        rating: 4, // Open Food Facts tem boa qualidade mas menor que TBCA
+        source: 'Open Food Facts'
+      }));
+      
+      return foodsWithRating;
+    } catch (error) {
+      console.error('Erro Open Food Facts API:', error);
       return [];
     }
   }
@@ -233,13 +271,18 @@ class FoodDataService {
   }
 
   async getFoodSubstitutes(originalFood: FoodItem, restrictions: string[] = []): Promise<FoodItem[]> {
-    // Busca substitutos com perfil nutricional similar usando apenas TBCA
+    // Busca substitutos com perfil nutricional similar usando ambas as APIs
     const calorieRange = 50;
     const proteinRange = 5;
     
     try {
-      // Buscar alimentos similares da TBCA
-      const similarFoods = await this.searchTBCA(originalFood.category || 'alimento', 10);
+      // Buscar alimentos similares de ambas as APIs
+      const [tbcaFoods, openFoodFoods] = await Promise.all([
+        this.searchTBCA(originalFood.category || 'alimento', 5),
+        this.searchOpenFood(originalFood.category || 'food', 5)
+      ]);
+      
+      const similarFoods = [...tbcaFoods, ...openFoodFoods];
       
       return similarFoods.filter(food => {
         // Filtrar por calorias similares

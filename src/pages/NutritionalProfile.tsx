@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Target, BarChart3, Database, Brain } from 'lucide-react';
+import { Menu, X, Target, Database } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from "@/integrations/supabase/client";
 import SidebarMenu from '@/components/SidebarMenu';
 import MealPlanGenerator from '@/components/MealPlanGenerator';
-import { ProgressReports } from '@/components/ProgressReports';
 import FoodDatabase from '@/components/FoodDatabase';
 import { useToast } from "@/hooks/use-toast";
 
@@ -74,18 +73,6 @@ const NutritionalProfilePage = () => {
       label: 'Plano Atual',
       icon: Target,
       description: 'Visualize seu plano alimentar personalizado'
-    },
-    {
-      id: 'smart-generator',
-      label: 'Gerador Inteligente',
-      icon: Brain,
-      description: 'Gere planos personalizados com IA'
-    },
-    {
-      id: 'reports',
-      label: 'Relatórios',
-      icon: BarChart3,
-      description: 'Acompanhe seu progresso e evolução'
     },
     {
       id: 'food-database',
@@ -159,7 +146,7 @@ const NutritionalProfilePage = () => {
           {/* Menu de Navegação Principal */}
           <Card className="mb-8 bg-white/95 backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {menuItems.map((item) => (
                   <Button
                     key={item.id}
@@ -195,7 +182,7 @@ const NutritionalProfilePage = () => {
 
           {/* Conteúdo Principal */}
           <div className="space-y-6">
-            {(activeTab === 'current-plan' || activeTab === 'smart-generator') && userProfile && (
+            {activeTab === 'current-plan' && userProfile && (
               <div className="space-y-6">
                 <Card className="bg-white/95 backdrop-blur-sm">
                   <CardContent className="p-6">
@@ -203,14 +190,6 @@ const NutritionalProfilePage = () => {
                   </CardContent>
                 </Card>
               </div>
-            )}
-
-            {activeTab === 'reports' && (
-              <Card className="bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <ProgressReports />
-                </CardContent>
-              </Card>
             )}
 
             {activeTab === 'food-database' && (
