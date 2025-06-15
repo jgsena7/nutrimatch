@@ -1,9 +1,9 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { User, LogOut, Moon, Sun } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
@@ -11,7 +11,6 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
 
   const scrollToFooter = () => {
@@ -48,7 +47,7 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-nutri-dark-900 dark:bg-black text-white py-4 px-6">
+    <header className="bg-nutri-dark-900 text-white py-4 px-6">
       <div className="container mx-auto flex items-center justify-between">
         <div 
           className="flex items-center space-x-2 cursor-pointer" 
@@ -93,20 +92,6 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center space-x-4">
-          {/* Theme Toggle Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleTheme}
-            className="text-white hover:text-nutri-green-400 hover:bg-nutri-dark-700 dark:hover:bg-gray-800"
-          >
-            {theme === 'light' ? (
-              <Moon className="w-4 h-4" />
-            ) : (
-              <Sun className="w-4 h-4" />
-            )}
-          </Button>
-
           {user ? (
             <>
               <button

@@ -60,13 +60,13 @@ const NutritionalProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 dark:from-black dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900">
       <SidebarMenu />
       
       <div className="pl-16 pr-6 py-6">
         <div className="max-w-4xl mx-auto">
           {/* Header do Perfil */}
-          <Card className="mb-8 bg-white/95 backdrop-blur-sm dark:bg-black/80 dark:border-gray-800">
+          <Card className="mb-8 bg-white/95 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center space-x-4">
                 <Avatar className="w-16 h-16">
@@ -79,10 +79,10 @@ const NutritionalProfilePage = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <CardTitle className="text-2xl text-nutri-dark-900 dark:text-white">
+                  <CardTitle className="text-2xl text-nutri-dark-900">
                     {user?.user_metadata?.full_name || user?.email || 'Usuário'}
                   </CardTitle>
-                  <p className="text-nutri-dark-600 dark:text-gray-300">Perfil Nutricional</p>
+                  <p className="text-nutri-dark-600">Perfil Nutricional</p>
                 </div>
               </div>
             </CardHeader>
@@ -90,43 +90,43 @@ const NutritionalProfilePage = () => {
 
           {/* Cards de Metas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-white/95 backdrop-blur-sm dark:bg-black/80 dark:border-gray-800">
+            <Card className="bg-white/95 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-nutri-green-100 dark:bg-nutri-green-900/50 rounded-lg">
-                    <Target className="w-6 h-6 text-nutri-green-600 dark:text-nutri-green-400" />
+                  <div className="p-2 bg-nutri-green-100 rounded-lg">
+                    <Target className="w-6 h-6 text-nutri-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-nutri-dark-600 dark:text-gray-300">Meta Calórica</p>
-                    <p className="text-2xl font-bold text-nutri-dark-900 dark:text-white">2.200 kcal</p>
+                    <p className="text-sm text-nutri-dark-600">Meta Calórica</p>
+                    <p className="text-2xl font-bold text-nutri-dark-900">2.200 kcal</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/95 backdrop-blur-sm dark:bg-black/80 dark:border-gray-800">
+            <Card className="bg-white/95 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <TrendingUp className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-nutri-dark-600 dark:text-gray-300">Consumido Hoje</p>
-                    <p className="text-2xl font-bold text-nutri-dark-900 dark:text-white">1.850 kcal</p>
+                    <p className="text-sm text-nutri-dark-600">Consumido Hoje</p>
+                    <p className="text-2xl font-bold text-nutri-dark-900">1.850 kcal</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/95 backdrop-blur-sm dark:bg-black/80 dark:border-gray-800">
+            <Card className="bg-white/95 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
-                    <Target className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Target className="w-6 h-6 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-nutri-dark-600 dark:text-gray-300">Restante</p>
-                    <p className="text-2xl font-bold text-nutri-dark-900 dark:text-white">350 kcal</p>
+                    <p className="text-sm text-nutri-dark-600">Restante</p>
+                    <p className="text-2xl font-bold text-nutri-dark-900">350 kcal</p>
                   </div>
                 </div>
               </CardContent>
@@ -134,7 +134,7 @@ const NutritionalProfilePage = () => {
           </div>
 
           {/* Accordion de Refeições */}
-          <Card className="bg-white/95 backdrop-blur-sm dark:bg-black/80 dark:border-gray-800">
+          <Card className="bg-white/95 backdrop-blur-sm">
             <CardContent className="p-6">
               <MealAccordion meals={meals} />
             </CardContent>

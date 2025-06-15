@@ -1,19 +1,16 @@
-
 import React from 'react';
 import Header from '@/components/Header';
 import NutritionalProfile from '@/components/NutritionalProfile';
 import NutritionAnalysis from '@/components/NutritionAnalysis';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 const Dashboard = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 dark:from-black dark:via-gray-900 dark:to-gray-800">
+  return <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900">
       <Header />
       
       <main className="container mx-auto px-6 py-12">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/10 backdrop-blur-sm dark:bg-black/20">
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/10 backdrop-blur-sm">
             <TabsTrigger value="profile" className="data-[state=active]:bg-nutri-green-500 data-[state=active]:text-white text-white">
               Perfil Nutricional
             </TabsTrigger>
@@ -33,8 +30,6 @@ const Dashboard = () => {
       </main>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
