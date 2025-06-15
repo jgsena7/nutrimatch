@@ -117,6 +117,78 @@ class MealPlanGenerator {
     };
   }
 
+  // Sistema robusto contra refeições vazias
+  private getFallbackFoods(): FoodItem[] {
+    return [
+      {
+        id: 'fallback_1',
+        name: 'Arroz, polido, cru',
+        calories: 358,
+        protein: 7.2,
+        carbs: 78.8,
+        fat: 0.5,
+        fiber: 1.6,
+        category: 'Cereais',
+        source: 'TBCA'
+      },
+      {
+        id: 'fallback_2',
+        name: 'Feijão, carioca, cru',
+        calories: 329,
+        protein: 20.9,
+        carbs: 61.2,
+        fat: 1.3,
+        fiber: 18.4,
+        category: 'Leguminosas',
+        source: 'TBCA'
+      },
+      {
+        id: 'fallback_3',
+        name: 'Frango, peito, sem pele, cru',
+        calories: 163,
+        protein: 30.2,
+        carbs: 0.0,
+        fat: 3.6,
+        fiber: 0.0,
+        category: 'Carnes',
+        source: 'TBCA'
+      },
+      {
+        id: 'fallback_4',
+        name: 'Banana, nanica, crua',
+        calories: 92,
+        protein: 1.3,
+        carbs: 23.8,
+        fat: 0.1,
+        fiber: 2.6,
+        category: 'Frutas',
+        source: 'TBCA'
+      },
+      {
+        id: 'fallback_5',
+        name: 'Batata, inglesa, crua',
+        calories: 52,
+        protein: 1.9,
+        carbs: 11.9,
+        fat: 0.1,
+        fiber: 1.3,
+        category: 'Tubérculos',
+        source: 'TBCA'
+      },
+      {
+        id: 'fallback_6',
+        name: 'Ovo, galinha, inteiro, cru',
+        calories: 143,
+        protein: 13.0,
+        carbs: 1.6,
+        fat: 8.9,
+        fiber: 0.0,
+        category: 'Ovos',
+        source: 'TBCA'
+      }
+    ];
+  }
+
   async generateMealPlan(profile: UserProfile): Promise<MealPlan> {
     const targetCalories = this.calculateBMR(profile);
     const macros = this.calculateMacros(targetCalories, profile.goal);
@@ -172,9 +244,44 @@ class MealPlanGenerator {
 
     const foods: MealFood[] = [];
     let remainingCalories = targetCalories;
+    let attempts = 0;
+    const maxAttempts = 3;
 
+    // Sistema robusto com retry automático
     for (const foodCategory of selectedTemplate.categories) {
-      const searchResults = await foodDataService.searchFoods(foodCategory, 10);
+      let searchResults: FoodItem[] = [];
+      attempts = 0;
+
+      // Tentar buscar com termo original
+      while (searchResults.length === 0 && attempts < maxAttempts) {
+        try {
+          if (attempts === 0) {
+            // Primeira tentativa: termo original
+            searchResults = await foodDataService.searchFoods(foodCategory, 10);
+          } else if (attempts === 1) {
+            // Segunda tentativa: termo mais genérico
+            const genericTerm = this.getGenericTerm(foodCategory);
+            searchResults = await foodDataService.searchFoods(genericTerm, 10);
+          } else {
+            // Terceira tentativa: usar fallback
+            const fallbackFoods = this.getFallbackFoods();
+            const categoryFallback = this.getCategoryFallback(foodCategory);
+            searchResults = fallbackFoods.filter(food => 
+              food.category.toLowerCase().includes(categoryFallback.toLowerCase()) ||
+              food.name.toLowerCase().includes(categoryFallback.toLowerCase())
+            );
+            
+            if (searchResults.length === 0) {
+              // Usar primeiro alimento do fallback
+              searchResults = [fallbackFoods[0]];
+            }
+          }
+          attempts++;
+        } catch (error) {
+          console.error(`Erro na busca (tentativa ${attempts + 1}):`, error);
+          attempts++;
+        }
+      }
       
       // Filtra alimentos com base nas restrições
       const filteredFoods = this.filterFoodsByRestrictions(searchResults, profile.foodRestrictions);
@@ -197,6 +304,28 @@ class MealPlanGenerator {
       }
     }
 
+    // Garantir mínimo de 2 alimentos por refeição
+    if (foods.length < 2) {
+      const fallbackFoods = this.getFallbackFoods();
+      const missingCount = 2 - foods.length;
+      
+      for (let i = 0; i < missingCount; i++) {
+        const fallbackFood = fallbackFoods[i % fallbackFoods.length];
+        const quantity = 50; // 50g padrão
+        
+        const mealFood: MealFood = {
+          food: fallbackFood,
+          quantity,
+          calories: (fallbackFood.calories * quantity) / 100,
+          protein: (fallbackFood.protein * quantity) / 100,
+          carbs: (fallbackFood.carbs * quantity) / 100,
+          fat: (fallbackFood.fat * quantity) / 100
+        };
+
+        foods.push(mealFood);
+      }
+    }
+
     const mealNutrition = this.calculateMealNutrition(foods);
     const recipes = await this.generateRecipes(foods);
 
@@ -211,34 +340,77 @@ class MealPlanGenerator {
     };
   }
 
+  private getGenericTerm(category: string): string {
+    const genericMap: { [key: string]: string } = {
+      'pão integral': 'pão',
+      'arroz integral': 'arroz',
+      'frango grelhado': 'frango',
+      'carne magra': 'carne',
+      'peixe grelhado': 'peixe',
+      'iogurte grego': 'iogurte',
+      'castanhas': 'amendoim',
+      'legumes': 'cenoura',
+      'salada verde': 'alface',
+      'salada': 'tomate',
+      'vegetais': 'brócolis',
+      'vitamina': 'banana',
+      'suco': 'laranja'
+    };
+
+    return genericMap[category] || category.split(' ')[0];
+  }
+
+  private getCategoryFallback(category: string): string {
+    const categoryMap: { [key: string]: string } = {
+      'pão': 'cereais',
+      'arroz': 'cereais',
+      'aveia': 'cereais',
+      'frango': 'carnes',
+      'carne': 'carnes',
+      'peixe': 'carnes',
+      'frutas': 'frutas',
+      'banana': 'frutas',
+      'maçã': 'frutas',
+      'leite': 'laticínios',
+      'iogurte': 'laticínios',
+      'ovos': 'ovos',
+      'batata': 'tubérculos',
+      'legumes': 'hortaliças',
+      'salada': 'hortaliças',
+      'vegetais': 'hortaliças'
+    };
+
+    return categoryMap[category] || 'cereais';
+  }
+
   private getMealTemplates(type: Meal['type']) {
     const templates = {
       'cafe-da-manha': [
-        { categories: ['pão integral', 'frutas', 'café', 'leite'] },
-        { categories: ['aveia', 'banana', 'iogurte', 'mel'] },
-        { categories: ['ovos', 'torradas', 'abacate', 'suco'] }
+        { categories: ['pão', 'frutas', 'leite'] },
+        { categories: ['aveia', 'banana', 'iogurte'] },
+        { categories: ['ovos', 'pão', 'frutas'] }
       ],
       'lanche-manha': [
-        { categories: ['frutas', 'castanhas'] },
-        { categories: ['iogurte', 'granola'] }
+        { categories: ['frutas', 'amendoim'] },
+        { categories: ['iogurte', 'aveia'] }
       ],
       'almoco': [
-        { categories: ['arroz integral', 'feijão', 'frango grelhado', 'salada'] },
-        { categories: ['macarrão integral', 'molho de tomate', 'carne magra', 'legumes'] },
-        { categories: ['quinoa', 'salmão', 'brócolis', 'batata doce'] }
+        { categories: ['arroz', 'feijão', 'frango', 'salada'] },
+        { categories: ['macarrão', 'carne', 'legumes'] },
+        { categories: ['arroz', 'peixe', 'brócolis', 'batata'] }
       ],
       'lanche-tarde': [
         { categories: ['frutas', 'iogurte'] },
-        { categories: ['vitamina', 'aveia'] }
+        { categories: ['banana', 'aveia'] }
       ],
       'jantar': [
-        { categories: ['peixe grelhado', 'legumes', 'salada verde'] },
-        { categories: ['frango', 'batata doce', 'aspargos'] },
-        { categories: ['tofu', 'arroz integral', 'vegetais'] }
+        { categories: ['peixe', 'legumes', 'salada'] },
+        { categories: ['frango', 'batata', 'vegetais'] },
+        { categories: ['carne', 'arroz', 'brócolis'] }
       ],
       'ceia': [
-        { categories: ['chá', 'biscoito integral'] },
-        { categories: ['leite', 'aveia'] }
+        { categories: ['leite', 'aveia'] },
+        { categories: ['iogurte', 'frutas'] }
       ]
     };
 
@@ -262,7 +434,7 @@ class MealPlanGenerator {
 
   private calculateOptimalQuantity(food: FoodItem, targetCalories: number): number {
     const baseQuantity = (targetCalories * 100) / food.calories;
-    return Math.round(Math.max(baseQuantity, 10)); // Mínimo 10g
+    return Math.round(Math.max(baseQuantity, 30)); // Mínimo 30g
   }
 
   private calculateMealNutrition(foods: MealFood[]) {
@@ -284,7 +456,6 @@ class MealPlanGenerator {
   }
 
   private async generateRecipes(foods: MealFood[]): Promise<Recipe[]> {
-    // Implementação simplificada - pode ser expandida com IA
     const recipes: Recipe[] = [];
     
     if (foods.length >= 2) {

@@ -3,12 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Clock, Target, Utensils, RefreshCw, ChefHat, Shuffle, Edit } from 'lucide-react';
 import { mealPlanGenerator, UserProfile, MealPlan, Meal, MealFood } from '@/services/mealPlanGenerator';
 import { foodDataService } from '@/services/foodDataService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
+import FoodSubstitutionModal from './FoodSubstitutionModal';
 
 interface MealPlanGeneratorProps {
   userProfile: {
@@ -31,6 +32,12 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
   const [isRegeneratingMeal, setIsRegeneratingMeal] = useState<string | null>(null);
   const [isSubstituting, setIsSubstituting] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
+  const [selectedFoodForSubstitution, setSelectedFoodForSubstitution] = useState<{
+    mealType: string;
+    foodIndex: number;
+    food: any;
+  } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,7 +79,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       
       toast({
         title: "Plano gerado com sucesso!",
-        description: `Plano criado com ${Math.round(plan.totalCalories)} kcal e ${Math.round(plan.totalProtein)}g de proteína`,
+        description: `Plano criado com ${Math.round(plan.totalCalories)} kcal usando dados TBCA-USP`,
       });
 
     } catch (error) {
@@ -131,7 +138,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         
         toast({
           title: "Refeição regenerada!",
-          description: `${newMeal.name} foi atualizada com novas opções.`,
+          description: `${newMeal.name} foi atualizada com novos alimentos TBCA-USP.`,
         });
       }
       
@@ -147,97 +154,82 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     }
   };
 
-  const substituteFoodItem = async (mealType: string, foodIndex: number) => {
+  const openSubstitutionModal = (mealType: string, foodIndex: number) => {
     if (!mealPlan) return;
     
-    const substitutionKey = `${mealType}-${foodIndex}`;
-    setIsSubstituting(substitutionKey);
+    const meal = mealPlan.meals.find(m => m.type === mealType);
+    if (!meal || !meal.foods[foodIndex]) return;
+
+    setSelectedFoodForSubstitution({
+      mealType,
+      foodIndex,
+      food: meal.foods[foodIndex].food
+    });
+    setShowSubstitutionModal(true);
+  };
+
+  const handleFoodSubstitution = (newFood: any) => {
+    if (!mealPlan || !selectedFoodForSubstitution) return;
+
+    const { mealType, foodIndex } = selectedFoodForSubstitution;
+    const meal = mealPlan.meals.find(m => m.type === mealType);
+    if (!meal) return;
+
+    const originalFood = meal.foods[foodIndex];
     
-    try {
-      const meal = mealPlan.meals.find(m => m.type === mealType);
-      if (!meal || !meal.foods[foodIndex]) return;
+    // Calcular nova quantidade para manter calorias similares
+    const newQuantity = Math.round((originalFood.calories * 100) / newFood.calories);
+    
+    const newMealFood: MealFood = {
+      food: newFood,
+      quantity: Math.max(newQuantity, 10), // Mínimo 10g
+      calories: Math.round((newQuantity / 100) * newFood.calories),
+      protein: Math.round((newQuantity / 100) * newFood.protein * 10) / 10,
+      carbs: Math.round((newQuantity / 100) * newFood.carbs * 10) / 10,
+      fat: Math.round((newQuantity / 100) * newFood.fat * 10) / 10
+    };
 
-      const originalFood = meal.foods[foodIndex];
-      const restrictions = userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : [];
-
-      // Buscar substitutos similares
-      const substitutes = await foodDataService.getFoodSubstitutes(originalFood.food, restrictions);
-      
-      if (substitutes.length > 0) {
-        const newFood = substitutes[0];
+    // Atualizar a refeição
+    const updatedMeals = mealPlan.meals.map(m => {
+      if (m.type === mealType) {
+        const updatedFoods = [...m.foods];
+        updatedFoods[foodIndex] = newMealFood;
         
-        // Calcular nova quantidade para manter calorias similares
-        const newQuantity = Math.round((originalFood.calories * 100) / newFood.calories);
-        
-        const newMealFood: MealFood = {
-          food: newFood,
-          quantity: Math.max(newQuantity, 10), // Mínimo 10g
-          calories: Math.round((newQuantity / 100) * newFood.calories),
-          protein: Math.round((newQuantity / 100) * newFood.protein * 10) / 10,
-          carbs: Math.round((newQuantity / 100) * newFood.carbs * 10) / 10,
-          fat: Math.round((newQuantity / 100) * newFood.fat * 10) / 10
-        };
+        // Recalcular totais da refeição
+        const totalCalories = updatedFoods.reduce((sum, food) => sum + food.calories, 0);
+        const totalProtein = updatedFoods.reduce((sum, food) => sum + food.protein, 0);
+        const totalCarbs = updatedFoods.reduce((sum, food) => sum + food.carbs, 0);
+        const totalFat = updatedFoods.reduce((sum, food) => sum + food.fat, 0);
 
-        // Atualizar a refeição
-        const updatedMeals = mealPlan.meals.map(m => {
-          if (m.type === mealType) {
-            const updatedFoods = [...m.foods];
-            updatedFoods[foodIndex] = newMealFood;
-            
-            // Recalcular totais da refeição
-            const totalCalories = updatedFoods.reduce((sum, food) => sum + food.calories, 0);
-            const totalProtein = updatedFoods.reduce((sum, food) => sum + food.protein, 0);
-            const totalCarbs = updatedFoods.reduce((sum, food) => sum + food.carbs, 0);
-            const totalFat = updatedFoods.reduce((sum, food) => sum + food.fat, 0);
-
-            return {
-              ...m,
-              foods: updatedFoods,
-              totalCalories,
-              totalProtein,
-              totalCarbs,
-              totalFat
-            };
-          }
-          return m;
-        });
-
-        // Recalcular totais do plano
-        const totalCalories = updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
-        const totalProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
-        const totalCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
-        const totalFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
-
-        setMealPlan({
-          ...mealPlan,
-          meals: updatedMeals,
+        return {
+          ...m,
+          foods: updatedFoods,
           totalCalories,
           totalProtein,
           totalCarbs,
           totalFat
-        });
-        
-        toast({
-          title: "Alimento substituído",
-          description: `${originalFood.food.name} foi substituído por ${newFood.name}`,
-        });
-      } else {
-        toast({
-          title: "Nenhum substituto encontrado",
-          description: "Não foi possível encontrar um substituto adequado.",
-          variant: "destructive",
-        });
+        };
       }
-    } catch (error) {
-      console.error('Erro ao buscar substituto:', error);
-      toast({
-        title: "Erro na substituição",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubstituting(null);
-    }
+      return m;
+    });
+
+    // Recalcular totais do plano
+    const totalCalories = updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+    const totalProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+    const totalCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+    const totalFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
+
+    setMealPlan({
+      ...mealPlan,
+      meals: updatedMeals,
+      totalCalories,
+      totalProtein,
+      totalCarbs,
+      totalFat
+    });
+
+    setShowSubstitutionModal(false);
+    setSelectedFoodForSubstitution(null);
   };
 
   const formatQuantity = (quantity: number): string => {
@@ -267,10 +259,10 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         <Card>
           <CardContent className="p-8 text-center">
             <Target className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
-            <h3 className="text-2xl font-semibold mb-4">Gerar Plano Alimentar Personalizado</h3>
+            <h3 className="text-2xl font-semibold mb-4">Gerar Plano Alimentar TBCA-USP</h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Crie um plano alimentar inteligente baseado no seu perfil nutricional, 
-              preferências alimentares e objetivos de saúde.
+              Crie um plano alimentar 100% brasileiro baseado na base de dados TBCA-USP, 
+              com alimentos validados pela Universidade de São Paulo.
             </p>
             <Button 
               onClick={generateMealPlan} 
@@ -335,125 +327,135 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         </CardContent>
       </Card>
 
-      {/* Plano de Refeições */}
-      <div className="grid gap-6">
-        {mealPlan.meals.map((meal) => (
-          <Card key={meal.id} className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-nutri-green-50 to-nutri-green-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-nutri-green-500 rounded-full">
-                    <Utensils className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">{meal.name}</CardTitle>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="w-4 h-4" />
-                      {meal.time}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-nutri-green-600">
-                      {Math.round(meal.totalCalories)} kcal
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => regenerateMeal(meal.type)}
-                    disabled={isRegeneratingMeal === meal.type}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Shuffle className={`w-4 h-4 ${isRegeneratingMeal === meal.type ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                {meal.foods && meal.foods.length > 0 ? (
-                  meal.foods.map((mealFood, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
-                          alt={mealFood.food.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center';
-                          }}
-                        />
-                        <div>
-                          <h4 className="font-medium">{mealFood.food.name}</h4>
-                          <p className="text-sm text-gray-600">
-                            {formatQuantity(mealFood.quantity)} • {Math.round(mealFood.calories)} kcal • TBCA-USP
-                          </p>
+      {/* Accordion de Refeições */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Utensils className="w-5 h-5 text-nutri-green-500" />
+            Seu Plano de Refeições - Base TBCA-USP
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="single" collapsible defaultValue="cafe-da-manha" className="space-y-4">
+            {mealPlan.meals.map((meal) => (
+              <AccordionItem key={meal.id} value={meal.type} className="border rounded-lg">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-nutri-green-500 rounded-full">
+                        <Utensils className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium">{meal.name}</div>
+                        <div className="text-sm text-gray-600 flex items-center gap-2">
+                          <Clock className="w-3 h-3" />
+                          {meal.time}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            P: {Math.round(mealFood.protein * 10) / 10}g
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            C: {Math.round(mealFood.carbs * 10) / 10}g
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            G: {Math.round(mealFood.fat * 10) / 10}g
-                          </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mr-4">
+                      <Badge variant="secondary" className="text-xs">
+                        {Math.round(meal.totalCalories)} kcal
+                      </Badge>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          regenerateMeal(meal.type);
+                        }}
+                        disabled={isRegeneratingMeal === meal.type}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Shuffle className={`w-3 h-3 ${isRegeneratingMeal === meal.type ? 'animate-spin' : ''}`} />
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-4">
+                    {meal.foods && meal.foods.length > 0 ? (
+                      meal.foods.map((mealFood, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
+                              alt={mealFood.food.name}
+                              className="w-10 h-10 rounded-lg object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center';
+                              }}
+                            />
+                            <div>
+                              <h4 className="font-medium text-sm">{mealFood.food.name}</h4>
+                              <p className="text-xs text-gray-600">
+                                {formatQuantity(mealFood.quantity)} • {Math.round(mealFood.calories)} kcal • TBCA-USP
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              <Badge variant="secondary" className="text-xs">
+                                P: {Math.round(mealFood.protein * 10) / 10}g
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                C: {Math.round(mealFood.carbs * 10) / 10}g
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                G: {Math.round(mealFood.fat * 10) / 10}g
+                              </Badge>
+                            </div>
+                            <Button
+                              onClick={() => openSubstitutionModal(meal.type, index)}
+                              variant="outline"
+                              size="sm"
+                              title="Trocar alimento"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        <ChefHat className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Nenhum alimento encontrado para esta refeição</p>
                         <Button
-                          onClick={() => substituteFoodItem(meal.type, index)}
-                          disabled={isSubstituting === `${meal.type}-${index}`}
+                          onClick={() => regenerateMeal(meal.type)}
                           variant="outline"
                           size="sm"
+                          className="mt-2"
                         >
-                          <Edit className={`w-4 h-4 ${isSubstituting === `${meal.type}-${index}` ? 'animate-spin' : ''}`} />
+                          Tentar novamente
                         </Button>
                       </div>
+                    )}
+
+                    {/* Resumo da Refeição */}
+                    <div className="grid grid-cols-4 gap-4 pt-3 border-t text-sm">
+                      <div className="text-center">
+                        <span className="text-gray-600">Total:</span>
+                        <div className="font-semibold">{Math.round(meal.totalCalories)} kcal</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-gray-600">Proteínas:</span>
+                        <div className="font-semibold text-blue-600">{Math.round(meal.totalProtein * 10) / 10}g</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-gray-600">Carboidratos:</span>
+                        <div className="font-semibold text-orange-600">{Math.round(meal.totalCarbs * 10) / 10}g</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-gray-600">Gorduras:</span>
+                        <div className="font-semibold text-purple-600">{Math.round(meal.totalFat * 10) / 10}g</div>
+                      </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <ChefHat className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>Nenhum alimento encontrado para esta refeição</p>
-                    <Button
-                      onClick={() => regenerateMeal(meal.type)}
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                    >
-                      Tentar novamente
-                    </Button>
                   </div>
-                )}
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Total:</span>
-                  <div className="font-semibold">{Math.round(meal.totalCalories)} kcal</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Proteínas:</span>
-                  <div className="font-semibold text-blue-600">{Math.round(meal.totalProtein * 10) / 10}g</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Carboidratos:</span>
-                  <div className="font-semibold text-orange-600">{Math.round(meal.totalCarbs * 10) / 10}g</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Gorduras:</span>
-                  <div className="font-semibold text-purple-600">{Math.round(meal.totalFat * 10) / 10}g</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      </Card>
 
       {/* Resumo do Dia */}
       {mealPlan.meals.length > 0 && (
@@ -497,6 +499,20 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Modal de Substituição */}
+      {showSubstitutionModal && selectedFoodForSubstitution && (
+        <FoodSubstitutionModal
+          isOpen={showSubstitutionModal}
+          onClose={() => {
+            setShowSubstitutionModal(false);
+            setSelectedFoodForSubstitution(null);
+          }}
+          currentFood={selectedFoodForSubstitution.food}
+          onSubstitute={handleFoodSubstitution}
+          restrictions={userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : []}
+        />
       )}
     </div>
   );

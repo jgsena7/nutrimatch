@@ -1,12 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Target, BarChart3, Database, Brain } from 'lucide-react';
+import { Menu, X, Target, Database } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from "@/integrations/supabase/client";
 import SidebarMenu from '@/components/SidebarMenu';
 import MealPlanGenerator from '@/components/MealPlanGenerator';
-import { ProgressReports } from '@/components/ProgressReports';
 import FoodDatabase from '@/components/FoodDatabase';
 import { useToast } from "@/hooks/use-toast";
 
@@ -68,6 +68,7 @@ const NutritionalProfilePage = () => {
     fetchUserProfile();
   }, [user, toast]);
 
+  // Menu simplificado - apenas 2 opções
   const menuItems = [
     {
       id: 'current-plan',
@@ -76,22 +77,10 @@ const NutritionalProfilePage = () => {
       description: 'Visualize seu plano alimentar personalizado'
     },
     {
-      id: 'smart-generator',
-      label: 'Gerador Inteligente',
-      icon: Brain,
-      description: 'Gere planos personalizados com IA'
-    },
-    {
-      id: 'reports',
-      label: 'Relatórios',
-      icon: BarChart3,
-      description: 'Acompanhe seu progresso e evolução'
-    },
-    {
       id: 'food-database',
       label: 'Base de Alimentos',
       icon: Database,
-      description: 'Busque informações nutricionais'
+      description: 'Busque informações nutricionais TBCA-USP'
     }
   ];
 
@@ -138,7 +127,7 @@ const NutritionalProfilePage = () => {
                     <span className="text-nutri-green-500">Nutri</span>Match Pro
                   </CardTitle>
                   <p className="text-nutri-dark-600 mt-2">
-                    Sistema Inteligente de Planos Alimentares Personalizados
+                    Sistema Inteligente com Base TBCA-USP Exclusiva
                   </p>
                   <p className="text-sm text-nutri-dark-500 mt-1">
                     Olá, {userProfile.name}! Seu plano está personalizado para seu objetivo de {userProfile.goal}.
@@ -156,10 +145,10 @@ const NutritionalProfilePage = () => {
             </CardHeader>
           </Card>
 
-          {/* Menu de Navegação Principal */}
+          {/* Menu de Navegação Principal - Simplificado para 2 colunas */}
           <Card className="mb-8 bg-white/95 backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {menuItems.map((item) => (
                   <Button
                     key={item.id}
@@ -195,7 +184,7 @@ const NutritionalProfilePage = () => {
 
           {/* Conteúdo Principal */}
           <div className="space-y-6">
-            {(activeTab === 'current-plan' || activeTab === 'smart-generator') && userProfile && (
+            {activeTab === 'current-plan' && userProfile && (
               <div className="space-y-6">
                 <Card className="bg-white/95 backdrop-blur-sm">
                   <CardContent className="p-6">
@@ -203,14 +192,6 @@ const NutritionalProfilePage = () => {
                   </CardContent>
                 </Card>
               </div>
-            )}
-
-            {activeTab === 'reports' && (
-              <Card className="bg-white/95 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <ProgressReports />
-                </CardContent>
-              </Card>
             )}
 
             {activeTab === 'food-database' && (
