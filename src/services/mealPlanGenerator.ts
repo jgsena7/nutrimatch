@@ -202,32 +202,15 @@ class MealPlanGenerator {
         }
       : this.calculateMacros(targetCalories, profile.goal);
 
-    // Nova distribuição sem ceia (soma das percentagens igual a 1, proporcional)
-    // Redistribuição: (antes: 0.25+0.10+0.30+0.10+0.20+0.05)
-    // Novo: 
-    // café-da-manha: 0.263
-    // lanche-manha: 0.105
-    // almoco: 0.316
-    // lanche-tarde: 0.105
-    // jantar: 0.211
-    //
-    // (baseado em: (antiga_pct/0.95), ex: 0.25/0.95=0.263)
-
-    const mealDistribution = {
-      'cafe-da-manha': 0.263,
-      'lanche-manha': 0.105,
-      'almoco': 0.316,
-      'lanche-tarde': 0.105,
-      'jantar': 0.211
-    };
-
+    // Vamos filtrar preferências e restrições em todas as refeições!
+    // Ao passar profile.foodPreferences com valores como "vegano" ou "low carb", aplicaremos regras especiais
     const meals: Meal[] = [];
 
     for (const [mealType, percentage] of Object.entries(mealDistribution)) {
-      const mealCalories = targetCalories * percentage;
+      // Passar profile para generateMeal para que ele aproveite os filtros abaixo
       const meal = await this.generateMeal(
         mealType as Meal['type'],
-        mealCalories,
+        targetCalories * percentage,
         macros,
         percentage,
         profile
@@ -239,7 +222,7 @@ class MealPlanGenerator {
 
     return {
       id: crypto.randomUUID(),
-      userId: '', // Será preenchido quando salvar
+      userId: '',
       date: new Date().toISOString().split('T')[0],
       meals,
       ...totalNutrition,
@@ -257,7 +240,7 @@ class MealPlanGenerator {
     percentage: number,
     profile: UserProfile
   ): Promise<Meal> {
-    const mealTemplates = this.getMealTemplates(type);
+    const mealTemplates = this.getMealTemplates(type, profile.foodPreferences);
     const selectedTemplate = mealTemplates[Math.floor(Math.random() * mealTemplates.length)];
 
     const foods: MealFood[] = [];
@@ -273,24 +256,37 @@ class MealPlanGenerator {
       // Tentar buscar com termo original
       while (searchResults.length === 0 && attempts < maxAttempts) {
         try {
+          let searchTerm = foodCategory;
+          // Adaptação para preferências
+          if (profile.foodPreferences.includes('vegano')) {
+            // Adicionar termos veganos automaticamente
+            if (foodCategory === 'carne' || foodCategory === 'frango' || foodCategory === 'peixe' || foodCategory === 'ovos' || foodCategory === 'leite' || foodCategory === 'iogurte') {
+              searchTerm = 'tofu'; // Exemplo: tofu para fonte de proteína
+            }
+          }
+          if (profile.foodPreferences.includes('low carb')) {
+            // Trocar cereais por ovos/carnes ou frutas de baixo carbo
+            if (foodCategory === 'arroz' || foodCategory === 'pão' || foodCategory === 'batata' || foodCategory === 'macarrão') {
+              searchTerm = 'ovos';
+            }
+            if (foodCategory === 'frutas') {
+              searchTerm = 'abacate'; // fruta low carb
+            }
+          }
+
           if (attempts === 0) {
-            // Primeira tentativa: termo original
-            searchResults = await foodDataService.searchFoods(foodCategory, 10);
+            searchResults = await foodDataService.searchFoods(searchTerm, 10);
           } else if (attempts === 1) {
-            // Segunda tentativa: termo mais genérico
-            const genericTerm = this.getGenericTerm(foodCategory);
+            const genericTerm = this.getGenericTerm(searchTerm);
             searchResults = await foodDataService.searchFoods(genericTerm, 10);
           } else {
-            // Terceira tentativa: usar fallback
             const fallbackFoods = this.getFallbackFoods();
-            const categoryFallback = this.getCategoryFallback(foodCategory);
+            const categoryFallback = this.getCategoryFallback(searchTerm);
             searchResults = fallbackFoods.filter(food => 
-              food.category.toLowerCase().includes(categoryFallback.toLowerCase()) ||
+              food.category?.toLowerCase().includes(categoryFallback.toLowerCase()) ||
               food.name.toLowerCase().includes(categoryFallback.toLowerCase())
             );
-            
             if (searchResults.length === 0) {
-              // Usar primeiro alimento do fallback
               searchResults = [fallbackFoods[0]];
             }
           }
@@ -302,8 +298,52 @@ class MealPlanGenerator {
       }
       
       // Filtra alimentos com base nas restrições
-      const filteredFoods = this.filterFoodsByRestrictions(searchResults, profile.foodRestrictions);
-      
+      let filteredFoods = this.filterFoodsByRestrictions(searchResults, profile.foodRestrictions);
+
+      // Filtros especiais para dieta vegana
+      if (profile.foodPreferences.includes('vegano')) {
+        filteredFoods = filteredFoods.filter(food =>
+          !/carne|frango|peixe|aves|leite|derivados|ovo|iogurte|laticínio/i.test(food.name)
+          && !/(carnes?|frangos?|peixes?|ovos?|iogurtes?|laticínios?)/i.test(food.category || '')
+        );
+      }
+
+      // Filtros especiais para low carb (ignora cereais e frutas ricas em carboidratos)
+      if (profile.foodPreferences.includes('low carb')) {
+        filteredFoods = filteredFoods.filter(food =>
+          (food.carbs ?? 0) <= 15 // até 15g carboidratos por 100g
+        );
+      }
+
+      // Filtro para lactose
+      if (profile.foodRestrictions.some(r => r.toLowerCase().includes('lactose'))) {
+        filteredFoods = filteredFoods.filter(food =>
+          !/leite|iogurte|queijo|manteiga|laticínio/i.test(food.name)
+          && !/laticínios?/.test(food.category || '')
+        );
+      }
+
+      // Filtro para glúten
+      if (profile.foodRestrictions.some(r => r.toLowerCase().includes('glúten') || r.toLowerCase().includes('gluten'))) {
+        filteredFoods = filteredFoods.filter(food =>
+          !/trigo|pão|macarrão|cereal|gluten|glúten/i.test(food.name)
+          && !/cereais|panificados/.test(food.category || '')
+        );
+      }
+
+      // Alergias (ex: amendoim, castanha, soja, peixe, ovo, frutos do mar, etc)
+      const commonAllergens = ['amendoim', 'soja', 'castanha', 'noz', 'peixe', 'ovo', 'fruto do mar', 'crustáceo', 'leite', 'glúten'];
+      profile.foodRestrictions.forEach(restriction => {
+        const r = restriction.toLowerCase();
+        if (commonAllergens.some(allergen => r.includes(allergen))) {
+          filteredFoods = filteredFoods.filter(food =>
+            !food.name.toLowerCase().includes(r) &&
+            !(food.allergens?.some(a => a.toLowerCase().includes(r))) &&
+            !(food.ingredients?.some(i => i.toLowerCase().includes(r)))
+          );
+        }
+      });
+
       if (filteredFoods.length > 0) {
         const selectedFood = filteredFoods[Math.floor(Math.random() * filteredFoods.length)];
         const quantity = this.calculateOptimalQuantity(selectedFood, remainingCalories * 0.4);
@@ -401,8 +441,9 @@ class MealPlanGenerator {
     return categoryMap[category] || 'cereais';
   }
 
-  private getMealTemplates(type: Meal['type']) {
-    const templates = {
+  // Adiciona suporte para seleção de preferências ao escolher templates baseados em perfil
+  private getMealTemplates(type: Meal['type'], preferences?: string[]) {
+    let templates = {
       'cafe-da-manha': [
         { categories: ['pão', 'frutas', 'leite'] },
         { categories: ['aveia', 'banana', 'iogurte'] },
@@ -426,8 +467,83 @@ class MealPlanGenerator {
         { categories: ['frango', 'batata', 'vegetais'] },
         { categories: ['carne', 'arroz', 'brócolis'] }
       ]
-      // Ceia removida dos templates
     };
+
+    // Troca fontes animais para veganos
+    if (preferences?.includes('vegano')) {
+      templates = {
+        'cafe-da-manha': [
+          { categories: ['pão', 'frutas', 'leite vegetal'] },
+          { categories: ['aveia', 'banana', 'pasta de amendoim'] }
+        ],
+        'lanche-manha': [
+          { categories: ['frutas', 'castanha'] },
+          { categories: ['leite vegetal', 'aveia'] }
+        ],
+        'almoco': [
+          { categories: ['arroz', 'feijão', 'tofu', 'salada'] },
+          { categories: ['grão-de-bico', 'legumes', 'quinoa'] }
+        ],
+        'lanche-tarde': [
+          { categories: ['frutas', 'castanha'] }
+        ],
+        'jantar': [
+          { categories: ['tofu', 'legumes', 'salada'] },
+          { categories: ['grão-de-bico', 'vegetais'] }
+        ]
+      };
+    }
+
+    // Troca carboidratos para fontes low carb
+    if (preferences?.includes('low carb')) {
+      templates = {
+        'cafe-da-manha': [
+          { categories: ['ovos', 'abacate'] },
+          { categories: ['frango', 'tomate'] }
+        ],
+        'lanche-manha': [
+          { categories: ['ovos'] },
+          { categories: ['castanha'] }
+        ],
+        'almoco': [
+          { categories: ['frango', 'salada', 'abacate'] },
+          { categories: ['ovos', 'legumes', 'carne'] }
+        ],
+        'lanche-tarde': [
+          { categories: ['castanha'] },
+          { categories: ['frango'] }
+        ],
+        'jantar': [
+          { categories: ['frango', 'salada', 'abacate'] },
+          { categories: ['ovos', 'vegetais'] }
+        ]
+      };
+    }
+
+    // Se o usuário for vegano e low carb ao mesmo tempo, opta por fontes tipo tofu, castanha, abacate
+    if (preferences?.includes('vegano') && preferences?.includes('low carb')) {
+      templates = {
+        'cafe-da-manha': [
+          { categories: ['tofu', 'abacate'] },
+          { categories: ['castanha', 'abacate'] }
+        ],
+        'lanche-manha': [
+          { categories: ['castanha'] },
+          { categories: ['abacate'] }
+        ],
+        'almoco': [
+          { categories: ['tofu', 'legumes', 'abacate'] },
+          { categories: ['grão-de-bico', 'vegetais'] }
+        ],
+        'lanche-tarde': [
+          { categories: ['castanha'] }
+        ],
+        'jantar': [
+          { categories: ['tofu', 'abacate', 'vegetais'] },
+          { categories: ['grão-de-bico', 'legumes'] }
+        ]
+      };
+    }
 
     return templates[type] || [];
   }
