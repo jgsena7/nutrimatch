@@ -188,9 +188,19 @@ class MealPlanGenerator {
     ];
   }
 
-  async generateMealPlan(profile: UserProfile): Promise<MealPlan> {
-    const targetCalories = this.calculateBMR(profile);
-    const macros = this.calculateMacros(targetCalories, profile.goal);
+  async generateMealPlan(
+    profile: UserProfile,
+    customGoals?: { calories: number; protein: number; carbs: number; fat: number }
+  ): Promise<MealPlan> {
+    // Use as metas customizadas se fornecidas, se não calcular normalmente
+    const targetCalories = customGoals?.calories ?? this.calculateBMR(profile);
+    const macros = customGoals
+      ? {
+          protein: customGoals.protein,
+          carbs: customGoals.carbs,
+          fat: customGoals.fat,
+        }
+      : this.calculateMacros(targetCalories, profile.goal);
 
     // Nova distribuição sem ceia (soma das percentagens igual a 1, proporcional)
     // Redistribuição: (antes: 0.25+0.10+0.30+0.10+0.20+0.05)

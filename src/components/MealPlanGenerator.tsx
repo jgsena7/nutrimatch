@@ -9,6 +9,7 @@ import { foodDataService } from '@/services/foodDataService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
 import FoodSubstitutionModal from './FoodSubstitutionModal';
+import EditNutritionGoalsModal from './EditNutritionGoalsModal';
 
 interface MealPlanGeneratorProps {
   userProfile: {
@@ -38,6 +39,13 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     food: any;
   } | null>(null);
   const { toast } = useToast();
+  const [showEditGoals, setShowEditGoals] = useState(false);
+  const [customGoals, setCustomGoals] = useState<null | {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }>(null);
 
   useEffect(() => {
     if (userProfile && user) {
@@ -45,7 +53,8 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     }
   }, [userProfile, user]);
 
-  const generateMealPlan = async () => {
+  // Atualiza as metas caso o usuário personalize
+  const generateMealPlan = async (goalsOverride?: { calories: number; protein: number; carbs: number; fat: number }) => {
     if (!userProfile.name) {
       toast({
         title: "Perfil incompleto",
@@ -57,7 +66,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
 
     setIsGenerating(true);
     setIsLoading(true);
-    
+
     try {
       const profile: UserProfile = {
         age: userProfile.age,
@@ -70,12 +79,11 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         foodRestrictions: userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : []
       };
 
-      console.log('Gerando plano com perfil:', profile);
-      const plan = await mealPlanGenerator.generateMealPlan(profile);
-      console.log('Plano gerado:', plan);
-      
+      // Passar metas customizadas para o generator em vez do cálculo padrão
+      const plan = await mealPlanGenerator.generateMealPlan(profile, goalsOverride || undefined);
+
       setMealPlan(plan);
-      
+
       toast({
         title: "Plano gerado com sucesso!",
         description: `Plano criado com ${Math.round(plan.totalCalories)} kcal usando dados TBCA-USP`,
@@ -92,6 +100,12 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       setIsGenerating(false);
       setIsLoading(false);
     }
+  };
+
+  // Atualiza plano quando usuário salva novas metas
+  const handleSaveGoals = (goals: { calories: number; protein: number; carbs: number; fat: number }) => {
+    setCustomGoals(goals);
+    generateMealPlan(goals);
   };
 
   const regenerateMeal = async (mealId: string) => {
@@ -283,6 +297,18 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     );
   }
 
+  // Ajusta valores das metas
+  const displayedGoals = customGoals
+    ? customGoals
+    : mealPlan
+    ? {
+        calories: Math.round(mealPlan.targetCalories),
+        protein: Math.round(mealPlan.targetProtein),
+        carbs: Math.round(mealPlan.targetCarbs),
+        fat: Math.round(mealPlan.targetFat),
+      }
+    : { calories: 2000, protein: 100, carbs: 250, fat: 60 }; // defaults
+
   return (
     <div className="space-y-6">
       {/* Resumo Nutricional */}
@@ -293,38 +319,55 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
               <Target className="w-5 h-5 text-nutri-green-500" />
               Suas Metas Nutricionais Diárias
             </CardTitle>
-            <Button
-              onClick={generateMealPlan}
-              disabled={isGenerating}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-              {isGenerating ? 'Gerando...' : 'Gerar Novo Plano'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowEditGoals(true)}
+                size="sm"
+                variant="outline"
+              >
+                Editar Metas
+              </Button>
+              <Button
+                onClick={() => generateMealPlan(customGoals || undefined)}
+                disabled={isGenerating}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                {isGenerating ? 'Gerando...' : 'Gerar Novo Plano'}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-nutri-green-600">{Math.round(mealPlan.targetCalories)}</div>
+              <div className="text-2xl font-bold text-nutri-green-600">{displayedGoals.calories}</div>
               <div className="text-sm text-gray-600">Meta Calorias</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{Math.round(mealPlan.targetProtein)}g</div>
+              <div className="text-2xl font-bold text-blue-600">{displayedGoals.protein}g</div>
               <div className="text-sm text-gray-600">Meta Proteínas</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{Math.round(mealPlan.targetCarbs)}g</div>
+              <div className="text-2xl font-bold text-orange-600">{displayedGoals.carbs}g</div>
               <div className="text-sm text-gray-600">Meta Carboidratos</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{Math.round(mealPlan.targetFat)}g</div>
+              <div className="text-2xl font-bold text-purple-600">{displayedGoals.fat}g</div>
               <div className="text-sm text-gray-600">Meta Gorduras</div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de edição das metas */}
+      <EditNutritionGoalsModal
+        open={showEditGoals}
+        onClose={() => setShowEditGoals(false)}
+        onSave={handleSaveGoals}
+        currentGoals={displayedGoals}
+      />
 
       {/* Accordion de Refeições */}
       <Card>
