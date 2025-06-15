@@ -57,6 +57,14 @@ export interface Recipe {
   difficulty: 'facil' | 'medio' | 'dificil';
 }
 
+const mealDistribution: { [key in Meal['type']]: number } = {
+  'cafe-da-manha': 0.25,
+  'lanche-manha': 0.10,
+  'almoco': 0.30,
+  'lanche-tarde': 0.10,
+  'jantar': 0.25, // 20% normalmente, use 25% para cobrir 100% se não houver 'ceia'
+};
+
 class MealPlanGenerator {
   private calculateBMR(profile: UserProfile): number {
     // Fórmula de Harris-Benedict
