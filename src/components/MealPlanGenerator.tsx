@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -263,33 +262,59 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
   const saveCustomMealPlan = async (plan: MealPlan) => {
     if (!user || !userProfile) return;
     try {
-      // Busca o perfil nutricional já existente (caso precise)
-      const { data: profiles, error } = await supabase
+      const { toast } = useToast(); // hook do toast
+
+      // Busca o perfil nutricional já existente
+      const { data: profiles, error: profilesError } = await supabase
         .from("nutritional_profiles")
         .select("id")
         .eq("user_id", user.id);
 
-      if (error || !profiles || profiles.length === 0) return;
+      if (profilesError || !profiles || profiles.length === 0) {
+        toast({
+          title: "Erro ao salvar plano",
+          description: "Não foi possível encontrar seu perfil nutricional.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const nutritionalProfileId = profiles[0].id;
 
-      // Correção: serializar o plano como JSON puro para garantir compatibilidade!
-      await supabase
+      const { error } = await supabase
         .from("user_meal_plans")
         .upsert([
           {
             user_id: user.id,
             user_profile_id: nutritionalProfileId,
             plan_date: new Date().toISOString().split("T")[0],
-            plan_data: JSON.parse(JSON.stringify(plan)), // <-- AQUI
+            plan_data: JSON.parse(JSON.stringify(plan)),
             updated_at: new Date().toISOString()
           }
         ], { onConflict: "user_id,plan_date" });
 
-      // Aqui não exibimos toast ao usuário para ficar transparente, mas pode ser adicionado se desejar
+      if (error) {
+        toast({
+          title: "Erro ao salvar plano",
+          description: error.message || "Algo deu errado ao salvar seu plano.",
+          variant: "destructive"
+        });
+        console.error("Erro ao salvar plano customizado na Supabase:", error);
+      } else {
+        toast({
+          title: "Plano salvo!",
+          description: "Seu plano alimentar foi salvo com sucesso.",
+          variant: "success"
+        });
+      }
     } catch (e) {
-      // Log para debug
-      console.error("Erro ao salvar plano customizado na Supabase", e);
+      const { toast } = useToast();
+      toast({
+        title: "Erro ao salvar plano",
+        description: "Ocorreu um erro inesperado ao salvar seu plano.",
+        variant: "destructive"
+      });
+      console.error("Erro inesperado ao salvar plano customizado na Supabase", e);
     }
   };
 
