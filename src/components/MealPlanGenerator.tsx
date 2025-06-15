@@ -303,8 +303,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       } else {
         toast({
           title: "Plano salvo!",
-          description: "Seu plano alimentar foi salvo com sucesso.",
-          variant: "success"
+          description: "Seu plano alimentar foi salvo com sucesso."
         });
       }
     } catch (e) {
