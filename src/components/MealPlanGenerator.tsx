@@ -1,127 +1,78 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, Target, Utensils, ThumbsUp, ThumbsDown, RefreshCw, ChefHat, Shuffle } from 'lucide-react';
-import { foodDataService, FoodItem } from '@/services/foodDataService';
-import { NutritionalCalculator, UserProfile, NutritionalNeeds } from '@/services/nutritionalCalculator';
-import { mealPlanCache } from '@/services/mealPlanCache';
+import { Clock, Target, Utensils, RefreshCw, ChefHat, Shuffle, Edit } from 'lucide-react';
+import { mealPlanGenerator, UserProfile, MealPlan, Meal, MealFood } from '@/services/mealPlanGenerator';
+import { foodDataService } from '@/services/foodDataService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
 
-interface MealFood {
-  food: FoodItem;
-  quantity: number;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-}
-
-interface Meal {
-  id: string;
-  name: string;
-  time: string;
-  targetCalories: number;
-  foods: MealFood[];
-  totalCalories: number;
-  totalProtein: number;
-  totalCarbs: number;
-  totalFat: number;
-}
-
 interface MealPlanGeneratorProps {
-  userProfile: UserProfile;
+  userProfile: {
+    name: string;
+    age: number;
+    height: number;
+    weight: number;
+    gender: string;
+    activity_level: string;
+    goal: string;
+    food_preferences: string;
+    food_restrictions: string;
+  };
 }
 
 const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) => {
   const { user } = useAuth();
-  const [nutritionalNeeds, setNutritionalNeeds] = useState<NutritionalNeeds | null>(null);
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegeneratingMeal, setIsRegeneratingMeal] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSubstituting, setIsSubstituting] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (userProfile && user) {
-      const needs = NutritionalCalculator.calculateNutritionalNeeds(userProfile);
-      setNutritionalNeeds(needs);
-      loadMealPlan(needs);
+      generateMealPlan();
     }
   }, [userProfile, user]);
 
-  const loadMealPlan = async (needs: NutritionalNeeds) => {
-    if (!user) return;
-    
+  const generateMealPlan = async () => {
+    if (!userProfile.name) {
+      toast({
+        title: "Perfil incompleto",
+        description: "Por favor, complete seu perfil nutricional antes de gerar um plano.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
     setIsLoading(true);
     
     try {
-      // Tentar carregar do cache primeiro
-      const cachedPlan = mealPlanCache.getMealPlan(user.id, userProfile);
-      
-      if (cachedPlan && cachedPlan.meals && cachedPlan.meals.length > 0) {
-        console.log('Carregando plano do cache...');
-        setMeals(cachedPlan.meals);
-        setIsLoading(false);
-        
-        toast({
-          title: "Plano carregado!",
-          description: "Seu plano alimentar foi carregado do cache.",
-        });
-        return;
-      }
-      
-      // Se não há cache, gerar novo plano
-      await generateMealPlan(needs, true);
-      
-    } catch (error) {
-      console.error('Erro ao carregar plano:', error);
-      await generateMealPlan(needs, true);
-    }
-  };
+      const profile: UserProfile = {
+        age: userProfile.age,
+        height: userProfile.height,
+        weight: userProfile.weight,
+        gender: userProfile.gender as any,
+        activityLevel: userProfile.activity_level as any,
+        goal: userProfile.goal as any,
+        foodPreferences: userProfile.food_preferences ? userProfile.food_preferences.split(',').map(p => p.trim()) : [],
+        foodRestrictions: userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : []
+      };
 
-  const generateMealPlan = async (needs: NutritionalNeeds, isInitialLoad: boolean = false) => {
-    if (!isInitialLoad) {
-      setIsGenerating(true);
-    }
-    
-    try {
-      const mealCalories = NutritionalCalculator.distributeMealCalories(needs.calories);
-      const mealSchedule = NutritionalCalculator.getMealSchedule();
-      const mealNames = NutritionalCalculator.getMealNames();
+      console.log('Gerando plano com perfil:', profile);
+      const plan = await mealPlanGenerator.generateMealPlan(profile);
+      console.log('Plano gerado:', plan);
       
-      const generatedMeals: Meal[] = [];
-
-      // Gerar todas as refeições com melhor distribuição de macros
-      const mealPromises = Object.entries(mealCalories).map(async ([mealId, targetCalories]) => {
-        const meal = await generateSingleMeal(mealId, mealNames[mealId], mealSchedule[mealId], targetCalories, needs);
-        return meal;
-      });
-
-      const allMeals = await Promise.all(mealPromises);
-      
-      // Ordenar as refeições na ordem correta
-      const mealOrder = ['cafe-da-manha', 'lanche-manha', 'almoco', 'lanche-tarde', 'jantar', 'ceia'];
-      const orderedMeals = mealOrder.map(mealId => 
-        allMeals.find(meal => meal.id === mealId)
-      ).filter(Boolean) as Meal[];
-
-      setMeals(orderedMeals);
-      
-      // Salvar no cache se há usuário
-      if (user) {
-        mealPlanCache.saveMealPlan(user.id, userProfile, { meals: orderedMeals });
-      }
-      
-      // Calcular totais para verificar aderência às metas
-      const totalCalories = orderedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
-      const totalProtein = orderedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+      setMealPlan(plan);
       
       toast({
         title: "Plano gerado com sucesso!",
-        description: `Plano criado com ${Math.round(totalCalories)} kcal e ${Math.round(totalProtein)}g de proteína`,
+        description: `Plano criado com ${Math.round(plan.totalCalories)} kcal e ${Math.round(plan.totalProtein)}g de proteína`,
       });
 
     } catch (error) {
@@ -137,123 +88,52 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     }
   };
 
-  const generateSingleMeal = async (
-    mealId: string,
-    name: string,
-    time: string,
-    targetCalories: number,
-    needs: NutritionalNeeds
-  ): Promise<Meal> => {
-    const meal: Meal = {
-      id: mealId,
-      name,
-      time,
-      targetCalories,
-      foods: [],
-      totalCalories: 0,
-      totalProtein: 0,
-      totalCarbs: 0,
-      totalFat: 0
-    };
-
-    // Gerar alimentos para esta refeição com múltiplas tentativas para garantir que não fique vazia
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (meal.foods.length === 0 && attempts < maxAttempts) {
-      attempts++;
-      console.log(`Tentativa ${attempts} para gerar ${mealId}`);
-      
-      try {
-        const mealFoods = await generateOptimizedMealFoods(mealId, targetCalories, needs, userProfile);
-        meal.foods = mealFoods;
-      } catch (error) {
-        console.error(`Erro na tentativa ${attempts} para ${mealId}:`, error);
-        if (attempts === maxAttempts) {
-          // Fallback: criar uma refeição básica
-          meal.foods = await createFallbackMeal(mealId, targetCalories);
-        }
-      }
-    }
-    
-    // Calcular totais
-    meal.totalCalories = meal.foods.reduce((sum, food) => sum + food.calories, 0);
-    meal.totalProtein = meal.foods.reduce((sum, food) => sum + food.protein, 0);
-    meal.totalCarbs = meal.foods.reduce((sum, food) => sum + food.carbs, 0);
-    meal.totalFat = meal.foods.reduce((sum, food) => sum + food.fat, 0);
-
-    return meal;
-  };
-
-  const createFallbackMeal = async (mealId: string, targetCalories: number): Promise<MealFood[]> => {
-    const fallbackFoods = {
-      'cafe-da-manha': ['pão', 'banana', 'leite'],
-      'lanche-manha': ['maçã', 'iogurte'],
-      'almoco': ['arroz', 'feijão', 'frango'],
-      'lanche-tarde': ['pão integral', 'queijo'],
-      'jantar': ['batata', 'carne', 'salada'],
-      'ceia': ['chá', 'biscoito']
-    };
-
-    const foodQueries = fallbackFoods[mealId as keyof typeof fallbackFoods] || ['arroz', 'feijão'];
-    const mealFoods: MealFood[] = [];
-
-    for (const query of foodQueries) {
-      try {
-        const searchResults = await foodDataService.searchFoods(query, 3);
-        if (searchResults.length > 0) {
-          const food = searchResults[0];
-          const quantity = Math.min(100, Math.max(30, (targetCalories / foodQueries.length / food.calories) * 100));
-          
-          mealFoods.push({
-            food,
-            quantity: Math.round(quantity),
-            calories: Math.round((quantity / 100) * food.calories),
-            protein: Math.round((quantity / 100) * food.protein * 10) / 10,
-            carbs: Math.round((quantity / 100) * food.carbs * 10) / 10,
-            fat: Math.round((quantity / 100) * food.fat * 10) / 10
-          });
-        }
-      } catch (error) {
-        console.error(`Erro ao buscar ${query}:`, error);
-      }
-    }
-
-    return mealFoods;
-  };
-
   const regenerateMeal = async (mealId: string) => {
-    if (!nutritionalNeeds) return;
+    if (!mealPlan) return;
     
     setIsRegeneratingMeal(mealId);
     
     try {
-      const mealToRegenerate = meals.find(m => m.id === mealId);
-      if (!mealToRegenerate) return;
+      const profile: UserProfile = {
+        age: userProfile.age,
+        height: userProfile.height,
+        weight: userProfile.weight,
+        gender: userProfile.gender as any,
+        activityLevel: userProfile.activity_level as any,
+        goal: userProfile.goal as any,
+        foodPreferences: userProfile.food_preferences ? userProfile.food_preferences.split(',').map(p => p.trim()) : [],
+        foodRestrictions: userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : []
+      };
+
+      // Gerar um novo plano completo e pegar apenas a refeição específica
+      const newPlan = await mealPlanGenerator.generateMealPlan(profile);
+      const newMeal = newPlan.meals.find(m => m.type === mealId);
       
-      const newMeal = await generateSingleMeal(
-        mealId, 
-        mealToRegenerate.name, 
-        mealToRegenerate.time, 
-        mealToRegenerate.targetCalories, 
-        nutritionalNeeds
-      );
-      
-      const updatedMeals = meals.map(meal => 
-        meal.id === mealId ? newMeal : meal
-      );
-      
-      setMeals(updatedMeals);
-      
-      // Atualizar cache
-      if (user) {
-        mealPlanCache.saveMealPlan(user.id, userProfile, { meals: updatedMeals });
+      if (newMeal) {
+        const updatedMeals = mealPlan.meals.map(meal => 
+          meal.type === mealId ? newMeal : meal
+        );
+        
+        // Recalcular totais
+        const totalCalories = updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+        const totalProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+        const totalCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+        const totalFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
+
+        setMealPlan({
+          ...mealPlan,
+          meals: updatedMeals,
+          totalCalories,
+          totalProtein,
+          totalCarbs,
+          totalFat
+        });
+        
+        toast({
+          title: "Refeição regenerada!",
+          description: `${newMeal.name} foi atualizada com novas opções.`,
+        });
       }
-      
-      toast({
-        title: "Refeição regenerada!",
-        description: `${newMeal.name} foi atualizada com novas opções.`,
-      });
       
     } catch (error) {
       console.error('Erro ao regenerar refeição:', error);
@@ -267,190 +147,96 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     }
   };
 
-  const generateOptimizedMealFoods = async (
-    mealId: string, 
-    targetCalories: number, 
-    needs: NutritionalNeeds,
-    profile: UserProfile
-  ): Promise<MealFood[]> => {
-    const mealFoods: MealFood[] = [];
+  const substituteFoodItem = async (mealType: string, foodIndex: number) => {
+    if (!mealPlan) return;
     
-    // Calcular metas de macros para esta refeição
-    const mealProteinTarget = (needs.protein * getMealProteinPercentage(mealId)) / 100;
-    const mealCarbsTarget = (needs.carbs * getMealCarbsPercentage(mealId)) / 100;
-    const mealFatTarget = (needs.fat * getMealFatPercentage(mealId)) / 100;
+    const substitutionKey = `${mealType}-${foodIndex}`;
+    setIsSubstituting(substitutionKey);
     
-    const mealFoodTypes = getOptimizedMealFoodTypes(mealId);
-    const restrictions = profile.food_restrictions?.toLowerCase().split(',').map(r => r.trim()) || [];
-    
-    let remainingCalories = targetCalories;
-    let remainingProtein = mealProteinTarget;
-    let remainingCarbs = mealCarbsTarget;
-    let remainingFat = mealFatTarget;
+    try {
+      const meal = mealPlan.meals.find(m => m.type === mealType);
+      if (!meal || !meal.foods[foodIndex]) return;
 
-    for (const foodType of mealFoodTypes) {
-      if (remainingCalories <= 30) break;
+      const originalFood = meal.foods[foodIndex];
+      const restrictions = userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : [];
+
+      // Buscar substitutos similares
+      const substitutes = await foodDataService.getFoodSubstitutes(originalFood.food, restrictions);
       
-      try {
-        const searchResults = await foodDataService.searchFoods(foodType.query, 8);
+      if (substitutes.length > 0) {
+        const newFood = substitutes[0];
         
-        const filteredFoods = searchResults.filter(food => {
-          const foodName = food.name.toLowerCase();
-          return !restrictions.some(restriction => 
-            restriction && foodName.includes(restriction)
-          );
+        // Calcular nova quantidade para manter calorias similares
+        const newQuantity = Math.round((originalFood.calories * 100) / newFood.calories);
+        
+        const newMealFood: MealFood = {
+          food: newFood,
+          quantity: Math.max(newQuantity, 10), // Mínimo 10g
+          calories: Math.round((newQuantity / 100) * newFood.calories),
+          protein: Math.round((newQuantity / 100) * newFood.protein * 10) / 10,
+          carbs: Math.round((newQuantity / 100) * newFood.carbs * 10) / 10,
+          fat: Math.round((newQuantity / 100) * newFood.fat * 10) / 10
+        };
+
+        // Atualizar a refeição
+        const updatedMeals = mealPlan.meals.map(m => {
+          if (m.type === mealType) {
+            const updatedFoods = [...m.foods];
+            updatedFoods[foodIndex] = newMealFood;
+            
+            // Recalcular totais da refeição
+            const totalCalories = updatedFoods.reduce((sum, food) => sum + food.calories, 0);
+            const totalProtein = updatedFoods.reduce((sum, food) => sum + food.protein, 0);
+            const totalCarbs = updatedFoods.reduce((sum, food) => sum + food.carbs, 0);
+            const totalFat = updatedFoods.reduce((sum, food) => sum + food.fat, 0);
+
+            return {
+              ...m,
+              foods: updatedFoods,
+              totalCalories,
+              totalProtein,
+              totalCarbs,
+              totalFat
+            };
+          }
+          return m;
         });
 
-        if (filteredFoods.length > 0) {
-          // Selecionar alimento baseado no que mais precisamos
-          const selectedFood = selectBestFood(filteredFoods, {
-            needsProtein: remainingProtein > 0,
-            needsCarbs: remainingCarbs > 0,
-            needsFat: remainingFat > 0,
-            targetCalories: Math.min(remainingCalories, foodType.maxCalories)
-          });
-          
-          if (selectedFood) {
-            const targetCaloriesForFood = Math.min(remainingCalories, foodType.maxCalories);
-            const quantity = Math.round((targetCaloriesForFood / selectedFood.calories) * 100);
-            
-            if (quantity > 0) {
-              const actualCalories = Math.round((quantity / 100) * selectedFood.calories);
-              const actualProtein = Math.round((quantity / 100) * selectedFood.protein * 10) / 10;
-              const actualCarbs = Math.round((quantity / 100) * selectedFood.carbs * 10) / 10;
-              const actualFat = Math.round((quantity / 100) * selectedFood.fat * 10) / 10;
+        // Recalcular totais do plano
+        const totalCalories = updatedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+        const totalProtein = updatedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+        const totalCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+        const totalFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
 
-              mealFoods.push({
-                food: selectedFood,
-                quantity,
-                calories: actualCalories,
-                protein: actualProtein,
-                carbs: actualCarbs,
-                fat: actualFat
-              });
-
-              remainingCalories -= actualCalories;
-              remainingProtein -= actualProtein;
-              remainingCarbs -= actualCarbs;
-              remainingFat -= actualFat;
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Erro ao buscar ${foodType.query}:`, error);
+        setMealPlan({
+          ...mealPlan,
+          meals: updatedMeals,
+          totalCalories,
+          totalProtein,
+          totalCarbs,
+          totalFat
+        });
+        
+        toast({
+          title: "Alimento substituído",
+          description: `${originalFood.food.name} foi substituído por ${newFood.name}`,
+        });
+      } else {
+        toast({
+          title: "Nenhum substituto encontrado",
+          description: "Não foi possível encontrar um substituto adequado.",
+          variant: "destructive",
+        });
       }
-    }
-
-    return mealFoods;
-  };
-
-  const selectBestFood = (foods: FoodItem[], needs: any): FoodItem | null => {
-    if (foods.length === 0) return null;
-    
-    // Pontuar alimentos baseado no que mais precisamos
-    const scoredFoods = foods.map(food => {
-      let score = 0;
-      
-      // Priorizar proteína se necessário
-      if (needs.needsProtein && food.protein > 15) score += 3;
-      if (needs.needsCarbs && food.carbs > 20) score += 2;
-      if (needs.needsFat && food.fat > 10) score += 2;
-      
-      // Penalizar alimentos muito calóricos
-      if (food.calories > needs.targetCalories * 1.5) score -= 2;
-      
-      // Bonus para alimentos balanceados
-      if (food.protein > 5 && food.carbs > 5 && food.fat > 2) score += 1;
-      
-      return { food, score };
-    });
-
-    // Ordenar por pontuação e retornar o melhor
-    scoredFoods.sort((a, b) => b.score - a.score);
-    return scoredFoods[0].food;
-  };
-
-  const getMealProteinPercentage = (mealId: string): number => {
-    const percentages: { [key: string]: number } = {
-      'cafe-da-manha': 25,
-      'lanche-manha': 10,
-      'almoco': 35,
-      'lanche-tarde': 10,
-      'jantar': 20,
-      'ceia': 0
-    };
-    return percentages[mealId] || 20;
-  };
-
-  const getMealCarbsPercentage = (mealId: string): number => {
-    const percentages: { [key: string]: number } = {
-      'cafe-da-manha': 25,
-      'lanche-manha': 15,
-      'almoco': 30,
-      'lanche-tarde': 15,
-      'jantar': 15,
-      'ceia': 0
-    };
-    return percentages[mealId] || 20;
-  };
-
-  const getMealFatPercentage = (mealId: string): number => {
-    const percentages: { [key: string]: number } = {
-      'cafe-da-manha': 25,
-      'lanche-manha': 10,
-      'almoco': 35,
-      'lanche-tarde': 10,
-      'jantar': 20,
-      'ceia': 0
-    };
-    return percentages[mealId] || 20;
-  };
-
-  const getOptimizedMealFoodTypes = (mealId: string) => {
-    const foodTypes = {
-      'cafe-da-manha': [
-        { query: 'pão integral', maxCalories: 120 },
-        { query: 'ovo', maxCalories: 80 },
-        { query: 'banana', maxCalories: 90 },
-        { query: 'leite desnatado', maxCalories: 80 },
-        { query: 'aveia', maxCalories: 60 }
-      ],
-      'lanche-manha': [
-        { query: 'fruta', maxCalories: 60 },
-        { query: 'iogurte', maxCalories: 80 }
-      ],
-      'almoco': [
-        { query: 'arroz integral', maxCalories: 180 },
-        { query: 'feijão', maxCalories: 120 },
-        { query: 'frango', maxCalories: 200 },
-        { query: 'salada', maxCalories: 40 },
-        { query: 'legumes', maxCalories: 60 }
-      ],
-      'lanche-tarde': [
-        { query: 'fruta', maxCalories: 70 },
-        { query: 'castanha', maxCalories: 80 }
-      ],
-      'jantar': [
-        { query: 'peixe', maxCalories: 150 },
-        { query: 'batata doce', maxCalories: 120 },
-        { query: 'verduras', maxCalories: 50 },
-        { query: 'azeite', maxCalories: 40 }
-      ],
-      'ceia': [
-        { query: 'chá', maxCalories: 20 }
-      ]
-    };
-
-    return foodTypes[mealId as keyof typeof foodTypes] || [];
-  };
-
-  const regeneratePlan = () => {
-    if (nutritionalNeeds) {
-      // Limpar cache antes de regenerar
-      if (user) {
-        mealPlanCache.clearUserCache(user.id);
-      }
-      generateMealPlan(nutritionalNeeds);
+    } catch (error) {
+      console.error('Erro ao buscar substituto:', error);
+      toast({
+        title: "Erro na substituição",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubstituting(null);
     }
   };
 
@@ -468,71 +254,90 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
           <CardContent className="p-8 text-center">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-nutri-green-500" />
             <h3 className="text-lg font-semibold mb-2">Carregando seu plano personalizado...</h3>
-            <p className="text-gray-600">Otimizando alimentos brasileiros da TBCA-USP para suas metas.</p>
+            <p className="text-gray-600">Criando plano alimentar com dados brasileiros da TBCA-USP.</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Calcular totais
-  const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
-  const totalProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
-  const totalCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
-  const totalFat = meals.reduce((sum, meal) => sum + meal.totalFat, 0);
+  if (!mealPlan) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Target className="w-16 h-16 mx-auto mb-4 text-nutri-green-500" />
+            <h3 className="text-2xl font-semibold mb-4">Gerar Plano Alimentar Personalizado</h3>
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+              Crie um plano alimentar inteligente baseado no seu perfil nutricional, 
+              preferências alimentares e objetivos de saúde.
+            </p>
+            <Button 
+              onClick={generateMealPlan} 
+              disabled={isGenerating}
+              className="bg-nutri-green-500 hover:bg-nutri-green-600 px-8 py-3 text-lg"
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                  Gerando seu plano...
+                </>
+              ) : (
+                'Gerar Plano Alimentar'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Resumo Nutricional */}
-      {nutritionalNeeds && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-nutri-green-500" />
-                Suas Metas Nutricionais Diárias
-              </CardTitle>
-              <Button
-                onClick={regeneratePlan}
-                disabled={isGenerating}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                {isGenerating ? 'Gerando...' : 'Gerar Novo Plano'}
-              </Button>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-nutri-green-500" />
+              Suas Metas Nutricionais Diárias
+            </CardTitle>
+            <Button
+              onClick={generateMealPlan}
+              disabled={isGenerating}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+              {isGenerating ? 'Gerando...' : 'Gerar Novo Plano'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-nutri-green-600">{Math.round(mealPlan.targetCalories)}</div>
+              <div className="text-sm text-gray-600">Meta Calorias</div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-nutri-green-600">{nutritionalNeeds.calories}</div>
-                <div className="text-sm text-gray-600">Calorias</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{nutritionalNeeds.protein}g</div>
-                <div className="text-sm text-gray-600">Proteínas</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{nutritionalNeeds.carbs}g</div>
-                <div className="text-sm text-gray-600">Carboidratos</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{nutritionalNeeds.fat}g</div>
-                <div className="text-sm text-gray-600">Gorduras</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{nutritionalNeeds.fiber}g</div>
-                <div className="text-sm text-gray-600">Fibras</div>
-              </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{Math.round(mealPlan.targetProtein)}g</div>
+              <div className="text-sm text-gray-600">Meta Proteínas</div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{Math.round(mealPlan.targetCarbs)}g</div>
+              <div className="text-sm text-gray-600">Meta Carboidratos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{Math.round(mealPlan.targetFat)}g</div>
+              <div className="text-sm text-gray-600">Meta Gorduras</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Plano de Refeições */}
       <div className="grid gap-6">
-        {meals.map((meal) => (
+        {mealPlan.meals.map((meal) => (
           <Card key={meal.id} className="overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-nutri-green-50 to-nutri-green-100">
               <div className="flex items-center justify-between">
@@ -551,26 +356,23 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
                     <div className="text-lg font-bold text-nutri-green-600">
-                      {meal.totalCalories} kcal
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Meta: {meal.targetCalories} kcal
+                      {Math.round(meal.totalCalories)} kcal
                     </div>
                   </div>
                   <Button
-                    onClick={() => regenerateMeal(meal.id)}
-                    disabled={isRegeneratingMeal === meal.id}
+                    onClick={() => regenerateMeal(meal.type)}
+                    disabled={isRegeneratingMeal === meal.type}
                     variant="outline"
                     size="sm"
                   >
-                    <Shuffle className={`w-4 h-4 ${isRegeneratingMeal === meal.id ? 'animate-spin' : ''}`} />
+                    <Shuffle className={`w-4 h-4 ${isRegeneratingMeal === meal.type ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                {meal.foods.length > 0 ? (
+                {meal.foods && meal.foods.length > 0 ? (
                   meal.foods.map((mealFood, index) => (
                     <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-4">
@@ -585,20 +387,30 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                         <div>
                           <h4 className="font-medium">{mealFood.food.name}</h4>
                           <p className="text-sm text-gray-600">
-                            {formatQuantity(mealFood.quantity)} • {mealFood.calories} kcal • TBCA-USP
+                            {formatQuantity(mealFood.quantity)} • {Math.round(mealFood.calories)} kcal • TBCA-USP
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          P: {mealFood.protein}g
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          C: {mealFood.carbs}g
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          G: {mealFood.fat}g
-                        </Badge>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            P: {Math.round(mealFood.protein * 10) / 10}g
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            C: {Math.round(mealFood.carbs * 10) / 10}g
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            G: {Math.round(mealFood.fat * 10) / 10}g
+                          </Badge>
+                        </div>
+                        <Button
+                          onClick={() => substituteFoodItem(meal.type, index)}
+                          disabled={isSubstituting === `${meal.type}-${index}`}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Edit className={`w-4 h-4 ${isSubstituting === `${meal.type}-${index}` ? 'animate-spin' : ''}`} />
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -607,7 +419,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                     <ChefHat className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p>Nenhum alimento encontrado para esta refeição</p>
                     <Button
-                      onClick={() => regenerateMeal(meal.id)}
+                      onClick={() => regenerateMeal(meal.type)}
                       variant="outline"
                       size="sm"
                       className="mt-2"
@@ -620,33 +432,22 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
 
               <Separator className="my-4" />
 
-              <div className="flex items-center justify-between">
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Total:</span>
-                    <div className="font-semibold">{meal.totalCalories} kcal</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Proteínas:</span>
-                    <div className="font-semibold text-blue-600">{meal.totalProtein}g</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Carboidratos:</span>
-                    <div className="font-semibold text-orange-600">{meal.totalCarbs}g</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Gorduras:</span>
-                    <div className="font-semibold text-purple-600">{meal.totalFat}g</div>
-                  </div>
+              <div className="grid grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Total:</span>
+                  <div className="font-semibold">{Math.round(meal.totalCalories)} kcal</div>
                 </div>
-
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <ThumbsUp className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <ThumbsDown className="w-4 h-4" />
-                  </Button>
+                <div>
+                  <span className="text-gray-600">Proteínas:</span>
+                  <div className="font-semibold text-blue-600">{Math.round(meal.totalProtein * 10) / 10}g</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Carboidratos:</span>
+                  <div className="font-semibold text-orange-600">{Math.round(meal.totalCarbs * 10) / 10}g</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Gorduras:</span>
+                  <div className="font-semibold text-purple-600">{Math.round(meal.totalFat * 10) / 10}g</div>
                 </div>
               </div>
             </CardContent>
@@ -655,11 +456,11 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       </div>
 
       {/* Resumo do Dia */}
-      {meals.length > 0 && (
+      {mealPlan.meals.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-nutri-green-500" />
+              <Target className="w-5 h-5 text-nutri-green-500" />
               Resumo do Dia
             </CardTitle>
           </CardHeader>
@@ -667,27 +468,31 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-nutri-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-nutri-green-600">
-                  {Math.round(totalCalories)}
+                  {Math.round(mealPlan.totalCalories)}
                 </div>
                 <div className="text-sm text-gray-600">Total de Calorias</div>
+                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetCalories)}</div>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(totalProtein)}g
+                  {Math.round(mealPlan.totalProtein)}g
                 </div>
                 <div className="text-sm text-gray-600">Total de Proteínas</div>
+                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetProtein)}g</div>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {Math.round(totalCarbs)}g
+                  {Math.round(mealPlan.totalCarbs)}g
                 </div>
                 <div className="text-sm text-gray-600">Total de Carboidratos</div>
+                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetCarbs)}g</div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {Math.round(totalFat)}g
+                  {Math.round(mealPlan.totalFat)}g
                 </div>
                 <div className="text-sm text-gray-600">Total de Gorduras</div>
+                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetFat)}g</div>
               </div>
             </div>
           </CardContent>
