@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,11 +95,6 @@ export const MealCard: React.FC<MealCardProps> = ({ meal, onFeedback, onSubstitu
                       <div className="text-xs text-nutri-green-600">{food.food.brand}</div>
                     )}
                   </div>
-                </div>
-                <div className="text-right mr-3 text-xs text-nutri-dark-600">
-                  <div>Prot: {Math.round(food.protein)}g</div>
-                  <div>Carb: {Math.round(food.carbs)}g</div>
-                  <div>Gord: {Math.round(food.fat)}g</div>
                 </div>
                 <Button
                   variant="ghost"
