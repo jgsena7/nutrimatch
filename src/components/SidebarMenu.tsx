@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Menu, X, Home, User, Utensils, ChefHat, LogOut } from 'lucide-react';
+import { Menu, X, Home, User, Utensils, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +36,7 @@ const SidebarMenu = () => {
   const menuItems = [
     { icon: Home, label: "Início", action: () => navigate('/') },
     { icon: User, label: "Meu Perfil", action: () => navigate('/profile') },
-    { icon: Utensils, label: "Plano Alimentar", action: () => navigate('/dashboard') },
-    { icon: ChefHat, label: "Receitas", action: () => console.log('Receitas') },
+    { icon: Utensils, label: "Plano Alimentar", action: () => navigate('/nutritional-profile') },
     { icon: LogOut, label: "Sair", action: handleSignOut },
   ];
 
