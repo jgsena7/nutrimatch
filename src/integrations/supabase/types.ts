@@ -84,6 +84,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_meal_plans: {
+        Row: {
+          created_at: string | null
+          id: string
+          plan_data: Json
+          plan_date: string
+          updated_at: string | null
+          user_id: string
+          user_profile_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          plan_data: Json
+          plan_date: string
+          updated_at?: string | null
+          user_id: string
+          user_profile_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          plan_data?: Json
+          plan_date?: string
+          updated_at?: string | null
+          user_id?: string
+          user_profile_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

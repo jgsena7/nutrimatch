@@ -15,6 +15,7 @@ import html2canvas from "html2canvas";
 import MainMealPlanHeader from './MainMealPlanHeader';
 import MealPlanAccordion from './MealPlanAccordion';
 import MealPlanSummary from './MealPlanSummary';
+import { supabase } from "@/integrations/supabase/client";
 
 interface MealPlanGeneratorProps {
   userProfile: {
@@ -257,6 +258,41 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     setShowSubstitutionModal(true);
   };
 
+  // Função para salvar (ou atualizar) o plano customizado na tabela user_meal_plans
+  const saveCustomMealPlan = async (plan: MealPlan) => {
+    if (!user || !userProfile) return;
+    try {
+      // Busca o perfil nutricional já existente (caso precise)
+      // Aqui estamos considerando que há apenas um perfil ativo por user (ajuste se precisar associar múltiplos perfis)
+      const { data: profiles, error } = await supabase
+        .from("nutritional_profiles")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (error || !profiles || profiles.length === 0) return;
+
+      const nutritionalProfileId = profiles[0].id;
+
+      // Realiza UPSERT para manter sempre o plano mais recente por data usuário/perfil
+      await supabase
+        .from("user_meal_plans")
+        .upsert([
+          {
+            user_id: user.id,
+            user_profile_id: nutritionalProfileId,
+            plan_date: new Date().toISOString().split("T")[0],
+            plan_data: plan,
+            updated_at: new Date().toISOString()
+          }
+        ], { onConflict: "user_id,plan_date" });
+
+      // Aqui não exibimos toast ao usuário para ficar transparente, mas pode ser adicionado se desejar
+    } catch (e) {
+      // Log apenas para debug; toast pode ser adicionado se necessário
+      console.error("Erro ao salvar plano customizado na Supabase", e);
+    }
+  };
+
   const handleFoodSubstitution = (newFood: any) => {
     if (!mealPlan || !selectedFoodForSubstitution) return;
 
@@ -308,14 +344,19 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     const totalCarbs = updatedMeals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
     const totalFat = updatedMeals.reduce((sum, meal) => sum + meal.totalFat, 0);
 
-    setMealPlan({
+    const updatedPlan = {
       ...mealPlan,
       meals: updatedMeals,
       totalCalories,
       totalProtein,
       totalCarbs,
       totalFat
-    });
+    };
+
+    setMealPlan(updatedPlan);
+
+    // SALVA O PLANO NOVO NA SUPABASE
+    saveCustomMealPlan(updatedPlan);
 
     setShowSubstitutionModal(false);
     setSelectedFoodForSubstitution(null);
