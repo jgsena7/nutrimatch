@@ -88,6 +88,11 @@ export const NutritionalPieChart: React.FC<NutritionalPieChartProps> = ({
   };
 
   const CustomLegend = ({ payload }: any) => {
+    // Add safety check to prevent undefined error
+    if (!payload || !Array.isArray(payload)) {
+      return null;
+    }
+
     return (
       <div className="flex justify-center gap-6 mt-6">
         {payload.map((entry: any, index: number) => (
