@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { NutritionalCalculator, UserProfile, NutritionalNeeds } from '@/services
 import { mealPlanCache } from '@/services/mealPlanCache';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
+import { NutritionalPieChart } from './NutritionalPieChart';
 
 interface MealFood {
   food: FoodItem;
@@ -94,7 +94,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       
       const generatedMeals: Meal[] = [];
 
-      // Gerar todas as refeições em paralelo para maior velocidade
+      // Gerar todas as refeições com melhor distribuição de macros
       const mealPromises = Object.entries(mealCalories).map(async ([mealId, targetCalories]) => {
         const meal: Meal = {
           id: mealId,
@@ -108,8 +108,8 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
           totalFat: 0
         };
 
-        // Gerar alimentos para esta refeição
-        const mealFoods = await generateMealFoods(mealId, targetCalories, userProfile);
+        // Gerar alimentos para esta refeição com foco nas metas nutricionais
+        const mealFoods = await generateOptimizedMealFoods(mealId, targetCalories, needs, userProfile);
         meal.foods = mealFoods;
         
         // Calcular totais
@@ -121,7 +121,6 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         return meal;
       });
 
-      // Aguardar todas as refeições serem geradas
       const allMeals = await Promise.all(mealPromises);
       
       // Ordenar as refeições na ordem correta
@@ -137,9 +136,13 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         mealPlanCache.saveMealPlan(user.id, userProfile, { meals: orderedMeals });
       }
       
+      // Calcular totais para verificar aderência às metas
+      const totalCalories = orderedMeals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+      const totalProtein = orderedMeals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+      
       toast({
         title: "Plano gerado com sucesso!",
-        description: `Criado plano personalizado com ${needs.calories} kcal/dia usando TBCA-USP`,
+        description: `Plano criado com ${Math.round(totalCalories)} kcal e ${Math.round(totalProtein)}g de proteína`,
       });
 
     } catch (error) {
@@ -155,24 +158,33 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     }
   };
 
-  const generateMealFoods = async (mealId: string, targetCalories: number, profile: UserProfile): Promise<MealFood[]> => {
+  const generateOptimizedMealFoods = async (
+    mealId: string, 
+    targetCalories: number, 
+    needs: NutritionalNeeds,
+    profile: UserProfile
+  ): Promise<MealFood[]> => {
     const mealFoods: MealFood[] = [];
     
-    // Definir tipos de alimentos por refeição otimizados para TBCA-USP
-    const mealFoodTypes = getMealFoodTypes(mealId);
+    // Calcular metas de macros para esta refeição
+    const mealProteinTarget = (needs.protein * getMealProteinPercentage(mealId)) / 100;
+    const mealCarbsTarget = (needs.carbs * getMealCarbsPercentage(mealId)) / 100;
+    const mealFatTarget = (needs.fat * getMealFatPercentage(mealId)) / 100;
+    
+    const mealFoodTypes = getOptimizedMealFoodTypes(mealId);
     const restrictions = profile.food_restrictions?.toLowerCase().split(',').map(r => r.trim()) || [];
     
     let remainingCalories = targetCalories;
+    let remainingProtein = mealProteinTarget;
+    let remainingCarbs = mealCarbsTarget;
+    let remainingFat = mealFatTarget;
 
-    // Processar alimentos em paralelo quando possível
-    const foodPromises = mealFoodTypes.map(async (foodType) => {
-      if (remainingCalories <= 50) return null;
+    for (const foodType of mealFoodTypes) {
+      if (remainingCalories <= 30) break;
       
       try {
-        // Buscar alimentos deste tipo apenas da TBCA
-        const searchResults = await foodDataService.searchFoods(foodType.query, 5);
+        const searchResults = await foodDataService.searchFoods(foodType.query, 8);
         
-        // Filtrar alimentos com restrições
         const filteredFoods = searchResults.filter(food => {
           const foodName = food.name.toLowerCase();
           return !restrictions.some(restriction => 
@@ -181,70 +193,142 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         });
 
         if (filteredFoods.length > 0) {
-          const selectedFood = filteredFoods[0];
-          const targetCaloriesForFood = Math.min(remainingCalories, foodType.maxCalories);
+          // Selecionar alimento baseado no que mais precisamos
+          const selectedFood = selectBestFood(filteredFoods, {
+            needsProtein: remainingProtein > 0,
+            needsCarbs: remainingCarbs > 0,
+            needsFat: remainingFat > 0,
+            targetCalories: Math.min(remainingCalories, foodType.maxCalories)
+          });
           
-          // Calcular quantidade em gramas
-          const quantity = Math.round((targetCaloriesForFood / selectedFood.calories) * 100);
-          
-          if (quantity > 0) {
-            const actualCalories = Math.round((quantity / 100) * selectedFood.calories);
-            const actualProtein = Math.round((quantity / 100) * selectedFood.protein * 10) / 10;
-            const actualCarbs = Math.round((quantity / 100) * selectedFood.carbs * 10) / 10;
-            const actualFat = Math.round((quantity / 100) * selectedFood.fat * 10) / 10;
+          if (selectedFood) {
+            const targetCaloriesForFood = Math.min(remainingCalories, foodType.maxCalories);
+            const quantity = Math.round((targetCaloriesForFood / selectedFood.calories) * 100);
+            
+            if (quantity > 0) {
+              const actualCalories = Math.round((quantity / 100) * selectedFood.calories);
+              const actualProtein = Math.round((quantity / 100) * selectedFood.protein * 10) / 10;
+              const actualCarbs = Math.round((quantity / 100) * selectedFood.carbs * 10) / 10;
+              const actualFat = Math.round((quantity / 100) * selectedFood.fat * 10) / 10;
 
-            remainingCalories -= actualCalories;
+              mealFoods.push({
+                food: selectedFood,
+                quantity,
+                calories: actualCalories,
+                protein: actualProtein,
+                carbs: actualCarbs,
+                fat: actualFat
+              });
 
-            return {
-              food: selectedFood,
-              quantity,
-              calories: actualCalories,
-              protein: actualProtein,
-              carbs: actualCarbs,
-              fat: actualFat
-            };
+              remainingCalories -= actualCalories;
+              remainingProtein -= actualProtein;
+              remainingCarbs -= actualCarbs;
+              remainingFat -= actualFat;
+            }
           }
         }
       } catch (error) {
         console.error(`Erro ao buscar ${foodType.query}:`, error);
       }
-      
-      return null;
-    });
+    }
 
-    const results = await Promise.all(foodPromises);
-    return results.filter(Boolean) as MealFood[];
+    return mealFoods;
   };
 
-  const getMealFoodTypes = (mealId: string) => {
+  const selectBestFood = (foods: FoodItem[], needs: any): FoodItem | null => {
+    if (foods.length === 0) return null;
+    
+    // Pontuar alimentos baseado no que mais precisamos
+    const scoredFoods = foods.map(food => {
+      let score = 0;
+      
+      // Priorizar proteína se necessário
+      if (needs.needsProtein && food.protein > 15) score += 3;
+      if (needs.needsCarbs && food.carbs > 20) score += 2;
+      if (needs.needsFat && food.fat > 10) score += 2;
+      
+      // Penalizar alimentos muito calóricos
+      if (food.calories > needs.targetCalories * 1.5) score -= 2;
+      
+      // Bonus para alimentos balanceados
+      if (food.protein > 5 && food.carbs > 5 && food.fat > 2) score += 1;
+      
+      return { food, score };
+    });
+
+    // Ordenar por pontuação e retornar o melhor
+    scoredFoods.sort((a, b) => b.score - a.score);
+    return scoredFoods[0].food;
+  };
+
+  const getMealProteinPercentage = (mealId: string): number => {
+    const percentages: { [key: string]: number } = {
+      'cafe-da-manha': 25,
+      'lanche-manha': 10,
+      'almoco': 35,
+      'lanche-tarde': 10,
+      'jantar': 20,
+      'ceia': 0
+    };
+    return percentages[mealId] || 20;
+  };
+
+  const getMealCarbsPercentage = (mealId: string): number => {
+    const percentages: { [key: string]: number } = {
+      'cafe-da-manha': 25,
+      'lanche-manha': 15,
+      'almoco': 30,
+      'lanche-tarde': 15,
+      'jantar': 15,
+      'ceia': 0
+    };
+    return percentages[mealId] || 20;
+  };
+
+  const getMealFatPercentage = (mealId: string): number => {
+    const percentages: { [key: string]: number } = {
+      'cafe-da-manha': 25,
+      'lanche-manha': 10,
+      'almoco': 35,
+      'lanche-tarde': 10,
+      'jantar': 20,
+      'ceia': 0
+    };
+    return percentages[mealId] || 20;
+  };
+
+  const getOptimizedMealFoodTypes = (mealId: string) => {
     const foodTypes = {
       'cafe-da-manha': [
-        { query: 'pão', maxCalories: 150 },
-        { query: 'ovo', maxCalories: 100 },
-        { query: 'banana', maxCalories: 80 },
-        { query: 'leite', maxCalories: 100 }
+        { query: 'pão integral', maxCalories: 120 },
+        { query: 'ovo', maxCalories: 80 },
+        { query: 'banana', maxCalories: 90 },
+        { query: 'leite desnatado', maxCalories: 80 },
+        { query: 'aveia', maxCalories: 60 }
       ],
       'lanche-manha': [
-        { query: 'banana', maxCalories: 60 },
-        { query: 'açaí', maxCalories: 80 }
+        { query: 'fruta', maxCalories: 60 },
+        { query: 'iogurte', maxCalories: 80 }
       ],
       'almoco': [
-        { query: 'arroz', maxCalories: 150 },
-        { query: 'feijão', maxCalories: 100 },
+        { query: 'arroz integral', maxCalories: 180 },
+        { query: 'feijão', maxCalories: 120 },
         { query: 'frango', maxCalories: 200 },
-        { query: 'tomate', maxCalories: 50 }
+        { query: 'salada', maxCalories: 40 },
+        { query: 'legumes', maxCalories: 60 }
       ],
       'lanche-tarde': [
-        { query: 'banana', maxCalories: 80 },
-        { query: 'açaí', maxCalories: 60 }
+        { query: 'fruta', maxCalories: 70 },
+        { query: 'castanha', maxCalories: 80 }
       ],
       'jantar': [
-        { query: 'frango', maxCalories: 150 },
-        { query: 'batata', maxCalories: 120 },
-        { query: 'alface', maxCalories: 40 }
+        { query: 'peixe', maxCalories: 150 },
+        { query: 'batata doce', maxCalories: 120 },
+        { query: 'verduras', maxCalories: 50 },
+        { query: 'azeite', maxCalories: 40 }
       ],
       'ceia': [
-        { query: 'leite', maxCalories: 80 }
+        { query: 'chá', maxCalories: 20 }
       ]
     };
 
@@ -275,12 +359,18 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
           <CardContent className="p-8 text-center">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-nutri-green-500" />
             <h3 className="text-lg font-semibold mb-2">Carregando seu plano personalizado...</h3>
-            <p className="text-gray-600">Buscando alimentos brasileiros da TBCA-USP.</p>
+            <p className="text-gray-600">Otimizando alimentos brasileiros da TBCA-USP para suas metas.</p>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  // Calcular totais para o gráfico de pizza
+  const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
+  const totalProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
+  const totalCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
+  const totalFat = meals.reduce((sum, meal) => sum + meal.totalFat, 0);
 
   return (
     <div className="space-y-6">
@@ -300,7 +390,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                 size="sm"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                Gerar Novo Plano
+                {isGenerating ? 'Gerando...' : 'Gerar Novo Plano'}
               </Button>
             </div>
           </CardHeader>
@@ -329,6 +419,16 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Gráfico de Pizza */}
+      {meals.length > 0 && (
+        <NutritionalPieChart
+          totalCalories={totalCalories}
+          totalProtein={totalProtein}
+          totalCarbs={totalCarbs}
+          totalFat={totalFat}
+        />
       )}
 
       {/* Plano de Refeições */}
