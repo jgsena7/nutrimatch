@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { aiImageService } from "./aiImageService";
 
 export interface FoodItem {
   id: string;
@@ -94,7 +94,8 @@ class FoodDataService {
       sodium: food.sodium ? Math.round(food.sodium) : undefined,
       category: food.category ? this.translateCategory(food.category) : undefined,
       allergens: food.allergens ? this.translateAllergens(food.allergens) : [],
-      ingredients: food.ingredients ? this.translateIngredients(food.ingredients) : []
+      ingredients: food.ingredients ? this.translateIngredients(food.ingredients) : [],
+      image: this.getAIGeneratedFoodImage(food.name, food.category) // Usar IA em vez de imagens estáticas
     };
   }
 
@@ -162,35 +163,20 @@ class FoodDataService {
     });
   }
 
-  private async searchTBCA(query: string, maxResults: number): Promise<FoodItem[]> {
-    try {
-      const { data, error } = await supabase.functions.invoke('search-food-tbca', {
-        body: { query, maxResults }
-      });
+  private getAIGeneratedFoodImage(foodName: string, category?: string): string {
+    // Iniciar geração assíncrona da imagem com IA
+    aiImageService.generateFoodImage(foodName, category).catch(error => {
+      console.warn(`Falha ao gerar imagem para ${foodName}:`, error);
+    });
 
-      if (error) {
-        console.error('Erro TBCA API:', error);
-        return [];
-      }
-      
-      // Adicionar imagens padrão e rating para alimentos brasileiros
-      const foodsWithImagesAndRating = (data?.foods || []).map((food: FoodItem) => ({
-        ...food,
-        image: this.getDefaultBrazilianFoodImage(food.name),
-        rating: 5 // TBCA tem dados de alta qualidade
-      }));
-      
-      return foodsWithImagesAndRating;
-    } catch (error) {
-      console.error('Erro TBCA API:', error);
-      return [];
-    }
+    // Retornar placeholder temporário enquanto a IA gera a imagem
+    return this.getStaticFallbackImage(foodName);
   }
 
-  private getDefaultBrazilianFoodImage(foodName: string): string {
+  private getStaticFallbackImage(foodName: string): string {
     const name = foodName.toLowerCase();
     
-    // Mapear alimentos brasileiros para imagens do Unsplash
+    // Mapear alimentos brasileiros para imagens do Unsplash (fallback)
     if (name.includes('arroz')) {
       return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&h=200&fit=crop&crop=center';
     }
@@ -230,6 +216,45 @@ class FoodDataService {
     
     // Imagem padrão
     return 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center';
+  }
+
+  private async searchTBCA(query: string, maxResults: number): Promise<FoodItem[]> {
+    try {
+      const { data, error } = await supabase.functions.invoke('search-food-tbca', {
+        body: { query, maxResults }
+      });
+
+      if (error) {
+        console.error('Erro TBCA API:', error);
+        return [];
+      }
+      
+      // Processar alimentos e iniciar geração de imagens em background
+      const foods = data?.foods || [];
+      
+      // Preparar lista de alimentos para geração de imagens em background
+      const foodsForImageGeneration = foods.map((food: FoodItem) => ({
+        name: food.name,
+        category: food.category
+      }));
+
+      // Iniciar geração de imagens em background (não aguarda)
+      if (foodsForImageGeneration.length > 0) {
+        aiImageService.generateImagesInBackground(foodsForImageGeneration);
+      }
+      
+      // Retornar alimentos com imagens de fallback enquanto IA gera as reais
+      const foodsWithImages = foods.map((food: FoodItem) => ({
+        ...food,
+        image: this.getStaticFallbackImage(food.name),
+        rating: 5 // TBCA tem dados de alta qualidade
+      }));
+      
+      return foodsWithImages;
+    } catch (error) {
+      console.error('Erro TBCA API:', error);
+      return [];
+    }
   }
 
   async getFoodSubstitutes(originalFood: FoodItem, restrictions: string[] = []): Promise<FoodItem[]> {

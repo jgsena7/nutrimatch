@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { foodDataService } from '@/services/foodDataService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
 import FoodSubstitutionModal from './FoodSubstitutionModal';
+import { AIFoodImage } from './AIFoodImage';
 
 interface MealPlanGeneratorProps {
   userProfile: {
@@ -377,13 +377,12 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                       meal.foods.map((mealFood, index) => (
                         <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
+                            <AIFoodImage
+                              foodName={mealFood.food.name}
+                              category={mealFood.food.category}
+                              fallbackImage={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
                               alt={mealFood.food.name}
-                              className="w-10 h-10 rounded-lg object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center';
-                              }}
+                              className="w-10 h-10 rounded-lg"
                             />
                             <div>
                               <h4 className="font-medium text-sm">{mealFood.food.name}</h4>

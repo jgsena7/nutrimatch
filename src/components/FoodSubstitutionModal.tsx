@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, X } from 'lucide-react';
 import { foodDataService, FoodItem } from '@/services/foodDataService';
 import { useToast } from "@/hooks/use-toast";
+import { AIFoodImage } from './AIFoodImage';
 
 interface FoodSubstitutionModalProps {
   isOpen: boolean;
@@ -143,9 +143,18 @@ export const FoodSubstitutionModal: React.FC<FoodSubstitutionModalProps> = ({
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <h3 className="font-medium mb-2">Alimento Atual:</h3>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{currentFood.name}</p>
-                <p className="text-sm text-gray-600">{currentFood.category} • TBCA-USP</p>
+              <div className="flex items-center gap-3">
+                <AIFoodImage
+                  foodName={currentFood.name}
+                  category={currentFood.category}
+                  fallbackImage={currentFood.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
+                  alt={currentFood.name}
+                  className="w-12 h-12 rounded-lg"
+                />
+                <div>
+                  <p className="font-medium">{currentFood.name}</p>
+                  <p className="text-sm text-gray-600">{currentFood.category} • TBCA-USP</p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <Badge variant="secondary">{formatNutrition(currentFood.calories)} kcal</Badge>
@@ -211,11 +220,20 @@ export const FoodSubstitutionModal: React.FC<FoodSubstitutionModalProps> = ({
                     onClick={() => handleSubstitute(food)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium">{food.name}</h4>
-                        <p className="text-sm text-gray-600">
-                          {food.category} • TBCA-USP • Por 100g
-                        </p>
+                      <div className="flex items-center gap-3 flex-1">
+                        <AIFoodImage
+                          foodName={food.name}
+                          category={food.category}
+                          fallbackImage={food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
+                          alt={food.name}
+                          className="w-12 h-12 rounded-lg"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium">{food.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            {food.category} • TBCA-USP • Por 100g
+                          </p>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Badge variant="outline" className="text-xs">
