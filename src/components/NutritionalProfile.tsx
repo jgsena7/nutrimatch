@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
 
 const NutritionalProfile = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +36,13 @@ const NutritionalProfile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // --- Adicionado para o popup ---
+  const [profileExists, setProfileExists] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [latestProfileId, setLatestProfileId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  // --- ---
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,33 +94,19 @@ const NutritionalProfile = () => {
         throw checkError;
       }
 
-      let result;
       if (existingProfiles && existingProfiles.length > 0) {
-        // Se existem perfis, pegar o mais recente e atualizar
-        const { data: latestProfile, error: latestError } = await supabase
-          .from('nutritional_profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (latestError) {
-          console.error('Erro ao buscar perfil mais recente:', latestError);
-          throw latestError;
-        }
-
-        // Atualizar o perfil mais recente
-        result = await supabase
-          .from('nutritional_profiles')
-          .update(profileData)
-          .eq('id', latestProfile.id);
-      } else {
-        // Criar novo perfil
-        result = await supabase
-          .from('nutritional_profiles')
-          .insert([profileData]);
+        // Se existir perfil, exibe dialog de aviso
+        setLatestProfileId(existingProfiles[0].id);
+        setProfileExists(true);
+        setDialogOpen(true);
+        setIsLoading(false); // Parar o loading, exibe o modal
+        return;
       }
+
+      // Criar novo perfil
+      const result = await supabase
+        .from('nutritional_profiles')
+        .insert([profileData]);
 
       if (result.error) {
         console.error('Erro ao salvar perfil:', result.error);
@@ -116,7 +118,6 @@ const NutritionalProfile = () => {
         description: "Seu plano alimentar personalizado está sendo criado.",
       });
 
-      // Aguardar um momento para o usuário ver a mensagem
       setTimeout(() => {
         navigate('/nutritional-profile');
       }, 1500);
@@ -133,12 +134,48 @@ const NutritionalProfile = () => {
     }
   };
 
-  const handleExport = () => {
-    toast({
-      title: "Exportando PDF...",
-      description: "Seu perfil nutricional será baixado em instantes."
-    });
+  // Excluir plano existente
+  const handleDeletePlan = async () => {
+    if (!user || !latestProfileId) return;
+    setDeleteLoading(true);
+    try {
+      // Deleta apenas o plano mais recente
+      const { error } = await supabase
+        .from('nutritional_profiles')
+        .delete()
+        .eq('id', latestProfileId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast({
+          title: "Erro ao excluir plano",
+          description: error.message || "Não foi possível excluir o plano.",
+          variant: "destructive",
+        });
+        setDeleteLoading(false);
+        return;
+      }
+
+      toast({
+        title: "Plano excluído!",
+        description: "Agora você pode criar um novo plano alimentar.",
+      });
+
+      setDialogOpen(false);
+      setProfileExists(false);
+
+    } catch (err) {
+      toast({
+        title: "Erro inesperado",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
   };
+
+  // Removido o botão Exportar...
 
   const handleVisualize = () => {
     if (!user) {
@@ -153,213 +190,234 @@ const NutritionalProfile = () => {
   };
 
   return (
-    <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900 text-black">
-          Perfil Nutricional
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">Nome *</Label>
-              <Input 
-                id="name" 
-                placeholder="Digite o seu nome" 
-                value={formData.name} 
-                onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                className="bg-white border border-gray-300 rounded-full py-3"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="age" className="text-sm font-medium text-gray-700 mb-2 block">Idade *</Label>
-              <Input 
-                id="age" 
-                placeholder="Digite a sua idade" 
-                type="number"
-                min="1"
-                max="120"
-                value={formData.age} 
-                onChange={e => setFormData({ ...formData, age: e.target.value })} 
-                className="bg-white border border-gray-300 rounded-full py-3"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="height" className="text-sm font-medium text-gray-700 mb-2 block">Altura (cm) *</Label>
-              <Input 
-                id="height" 
-                placeholder="Digite a sua altura" 
-                type="number"
-                min="100"
-                max="250"
-                step="0.1"
-                value={formData.height} 
-                onChange={e => setFormData({ ...formData, height: e.target.value })} 
-                className="bg-white border border-gray-300 rounded-full py-3"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="weight" className="text-sm font-medium text-gray-700 mb-2 block">Peso (kg) *</Label>
-              <Input 
-                id="weight" 
-                placeholder="Digite o seu peso" 
-                type="number"
-                min="30"
-                max="300"
-                step="0.1"
-                value={formData.weight} 
-                onChange={e => setFormData({ ...formData, weight: e.target.value })} 
-                className="bg-white border border-gray-300 rounded-full py-3"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">Gênero *</Label>
-            <RadioGroup 
-              value={formData.gender} 
-              onValueChange={value => setFormData({ ...formData, gender: value })}
-              required
-            >
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="feminino" id="feminino" />
-                  <Label htmlFor="feminino">Feminino</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="masculino" id="masculino" />
-                  <Label htmlFor="masculino">Masculino</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="outros" id="outros" />
-                  <Label htmlFor="outros">Outros</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="prefiro-nao-dizer" id="prefiro-nao-dizer" />
-                  <Label htmlFor="prefiro-nao-dizer">Prefiro não dizer</Label>
-                </div>
+    <>
+      <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900 text-black">
+            Perfil Nutricional
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">Nome *</Label>
+                <Input 
+                  id="name" 
+                  placeholder="Digite o seu nome" 
+                  value={formData.name} 
+                  onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                  className="bg-white border border-gray-300 rounded-full py-3"
+                  required
+                />
               </div>
-            </RadioGroup>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">Nível de atividade física *</Label>
-            <RadioGroup 
-              value={formData.activityLevel} 
-              onValueChange={value => setFormData({ ...formData, activityLevel: value })}
-              required
-            >
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sedentario" id="sedentario" />
-                  <Label htmlFor="sedentario">Sedentário</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="leve" id="leve" />
-                  <Label htmlFor="leve">Leve</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="moderado" id="moderado" />
-                  <Label htmlFor="moderado">Moderado</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="intenso" id="intenso" />
-                  <Label htmlFor="intenso">Intenso</Label>
-                </div>
+              <div>
+                <Label htmlFor="age" className="text-sm font-medium text-gray-700 mb-2 block">Idade *</Label>
+                <Input 
+                  id="age" 
+                  placeholder="Digite a sua idade" 
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={formData.age} 
+                  onChange={e => setFormData({ ...formData, age: e.target.value })} 
+                  className="bg-white border border-gray-300 rounded-full py-3"
+                  required
+                />
               </div>
-            </RadioGroup>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">Objetivo de saúde *</Label>
-            <RadioGroup 
-              value={formData.goal} 
-              onValueChange={value => setFormData({ ...formData, goal: value })}
-              required
-            >
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="emagrecimento" id="emagrecimento" />
-                  <Label htmlFor="emagrecimento">Emagrecimento</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ganho-massa" id="ganho-massa" />
-                  <Label htmlFor="ganho-massa">Ganho de massa</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="manutencao" id="manutencao" />
-                  <Label htmlFor="manutencao">Manutenção</Label>
-                </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="height" className="text-sm font-medium text-gray-700 mb-2 block">Altura (cm) *</Label>
+                <Input 
+                  id="height" 
+                  placeholder="Digite a sua altura" 
+                  type="number"
+                  min="100"
+                  max="250"
+                  step="0.1"
+                  value={formData.height} 
+                  onChange={e => setFormData({ ...formData, height: e.target.value })} 
+                  className="bg-white border border-gray-300 rounded-full py-3"
+                  required
+                />
               </div>
-            </RadioGroup>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="foodPreferences" className="text-sm font-medium text-gray-700 mb-2 block">Preferências Alimentares</Label>
-              <Input 
-                id="foodPreferences" 
-                placeholder="Digite as suas preferências" 
-                value={formData.foodPreferences} 
-                onChange={e => setFormData({ ...formData, foodPreferences: e.target.value })} 
-                className="bg-white border border-gray-300 rounded-full py-3" 
-              />
+              <div>
+                <Label htmlFor="weight" className="text-sm font-medium text-gray-700 mb-2 block">Peso (kg) *</Label>
+                <Input 
+                  id="weight" 
+                  placeholder="Digite o seu peso" 
+                  type="number"
+                  min="30"
+                  max="300"
+                  step="0.1"
+                  value={formData.weight} 
+                  onChange={e => setFormData({ ...formData, weight: e.target.value })} 
+                  className="bg-white border border-gray-300 rounded-full py-3"
+                  required
+                />
+              </div>
             </div>
             <div>
-              <Label htmlFor="foodRestrictions" className="text-sm font-medium text-gray-700 mb-2 block">Restrições Alimentares</Label>
-              <Input 
-                id="foodRestrictions" 
-                placeholder="Digite as suas restrições" 
-                value={formData.foodRestrictions} 
-                onChange={e => setFormData({ ...formData, foodRestrictions: e.target.value })} 
-                className="bg-white border border-gray-300 rounded-full py-3" 
-              />
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Gênero *</Label>
+              <RadioGroup 
+                value={formData.gender} 
+                onValueChange={value => setFormData({ ...formData, gender: value })}
+                required
+              >
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="feminino" id="feminino" />
+                    <Label htmlFor="feminino">Feminino</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="masculino" id="masculino" />
+                    <Label htmlFor="masculino">Masculino</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="outros" id="outros" />
+                    <Label htmlFor="outros">Outros</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="prefiro-nao-dizer" id="prefiro-nao-dizer" />
+                    <Label htmlFor="prefiro-nao-dizer">Prefiro não dizer</Label>
+                  </div>
+                </div>
+              </RadioGroup>
             </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 pt-6">
-            <Button 
-              type="submit" 
-              disabled={isLoading}
-              className="flex-1 bg-nutri-green-500 hover:bg-nutri-green-600 text-white py-3 rounded-full font-semibold"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar Plano'
-              )}
-            </Button>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Nível de atividade física *</Label>
+              <RadioGroup 
+                value={formData.activityLevel} 
+                onValueChange={value => setFormData({ ...formData, activityLevel: value })}
+                required
+              >
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sedentario" id="sedentario" />
+                    <Label htmlFor="sedentario">Sedentário</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="leve" id="leve" />
+                    <Label htmlFor="leve">Leve</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="moderado" id="moderado" />
+                    <Label htmlFor="moderado">Moderado</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="intenso" id="intenso" />
+                    <Label htmlFor="intenso">Intenso</Label>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Objetivo de saúde *</Label>
+              <RadioGroup 
+                value={formData.goal} 
+                onValueChange={value => setFormData({ ...formData, goal: value })}
+                required
+              >
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="emagrecimento" id="emagrecimento" />
+                    <Label htmlFor="emagrecimento">Emagrecimento</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="ganho-massa" id="ganho-massa" />
+                    <Label htmlFor="ganho-massa">Ganho de massa</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manutencao" id="manutencao" />
+                    <Label htmlFor="manutencao">Manutenção</Label>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="foodPreferences" className="text-sm font-medium text-gray-700 mb-2 block">Preferências Alimentares</Label>
+                <Input 
+                  id="foodPreferences" 
+                  placeholder="Digite as suas preferências" 
+                  value={formData.foodPreferences} 
+                  onChange={e => setFormData({ ...formData, foodPreferences: e.target.value })} 
+                  className="bg-white border border-gray-300 rounded-full py-3" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="foodRestrictions" className="text-sm font-medium text-gray-700 mb-2 block">Restrições Alimentares</Label>
+                <Input 
+                  id="foodRestrictions" 
+                  placeholder="Digite as suas restrições" 
+                  value={formData.foodRestrictions} 
+                  onChange={e => setFormData({ ...formData, foodRestrictions: e.target.value })} 
+                  className="bg-white border border-gray-300 rounded-full py-3" 
+                />
+              </div>
+            </div>
+            {/* Botões: Exportar removido */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-6">
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="flex-1 bg-nutri-green-500 hover:bg-nutri-green-600 text-white py-3 rounded-full font-semibold"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar Plano'
+                )}
+              </Button>
+            </div>
             <Button 
               type="button" 
-              onClick={handleExport} 
-              className="flex-1 bg-nutri-green-600 hover:bg-nutri-green-700 text-white py-3 rounded-full font-semibold"
+              onClick={handleVisualize} 
+              className="w-full bg-nutri-green-400 hover:bg-nutri-green-500 text-white py-3 rounded-full font-semibold"
             >
-              Exportar (PDF)
+              Visualizar Plano
             </Button>
-          </div>
-          
-          <Button 
-            type="button" 
-            onClick={handleVisualize} 
-            className="w-full bg-nutri-green-400 hover:bg-nutri-green-500 text-white py-3 rounded-full font-semibold"
-          >
-            Visualizar Plano
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Dialog para caso o usuário já tenha plano */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Você já possui um plano alimentar!</DialogTitle>
+            <DialogDescription>
+              Para criar um novo plano, é necessário excluir o atual. O que deseja fazer?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:gap-0">
+            <Button 
+              onClick={() => {
+                setDialogOpen(false);
+                navigate('/nutritional-profile');
+              }} 
+              variant="outline"
+            >
+              Visualizar plano
+            </Button>
+            <Button 
+              onClick={handleDeletePlan} 
+              variant="destructive"
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Excluir plano
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
 export default NutritionalProfile;
+
