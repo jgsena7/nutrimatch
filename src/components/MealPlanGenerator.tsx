@@ -3,13 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Clock, Target, Utensils, RefreshCw, ChefHat, Shuffle, Edit } from 'lucide-react';
+import { Clock, Target, Utensils, RefreshCw, ChefHat, Shuffle, Edit, FileText } from 'lucide-react';
 import { mealPlanGenerator, UserProfile, MealPlan, Meal, MealFood } from '@/services/mealPlanGenerator';
 import { foodDataService } from '@/services/foodDataService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
 import FoodSubstitutionModal from './FoodSubstitutionModal';
 import EditNutritionGoalsModal from './EditNutritionGoalsModal';
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface MealPlanGeneratorProps {
   userProfile: {
@@ -46,6 +48,77 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     carbs: number;
     fat: number;
   }>(null);
+
+  // Adicione refs para as seções a serem exportadas
+  const metasRef = React.useRef<HTMLDivElement>(null);
+  const planoRef = React.useRef<HTMLDivElement>(null);
+  const resumoRef = React.useRef<HTMLDivElement>(null);
+
+  // Função para exportar as seções para PDF
+  const handleExportPDF = async () => {
+    try {
+      const doc = new jsPDF("p", "mm", "a4");
+      const padding = 12;
+      let yOffset = 10;
+
+      // Helper para adicionar print de uma ref na página atual do PDF
+      const appendSectionToPDF = async (
+        ref: React.RefObject<HTMLDivElement>,
+        titulo: string
+      ) => {
+        if (!ref.current) return;
+        // Adiciona título antes da seção
+        doc.setFontSize(16);
+        doc.text(titulo, padding, yOffset + 8);
+
+        // Renderiza a ref para imagem
+        const canvas = await html2canvas(ref.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#fff",
+        });
+        const imgData = canvas.toDataURL("image/png");
+        const imgProps = doc.getImageProperties(imgData);
+
+        // Ajusta tamanho da imagem ao PDF
+        const pdfWidth = doc.internal.pageSize.getWidth() - 2 * padding;
+        const aspectRatio = imgProps.height / imgProps.width;
+        const pdfHeight = pdfWidth * aspectRatio;
+
+        // Se não couber na página, quebra
+        if (yOffset + 8 + pdfHeight > doc.internal.pageSize.getHeight() - padding) {
+          doc.addPage();
+          yOffset = 10;
+          doc.setFontSize(16);
+          doc.text(titulo + " (cont.)", padding, yOffset + 8);
+        }
+        yOffset += 10;
+
+        doc.addImage(
+          imgData,
+          "PNG",
+          padding,
+          yOffset,
+          pdfWidth,
+          pdfHeight
+        );
+        yOffset += pdfHeight + 12;
+      };
+
+      await appendSectionToPDF(metasRef, "Metas Nutricionais Diárias");
+      await appendSectionToPDF(planoRef, "Plano de Refeições (todos abertos)");
+      await appendSectionToPDF(resumoRef, "Resumo do Dia");
+
+      doc.save("plano-alimentar.pdf");
+    } catch (err) {
+      toast({
+        title: "Falha ao exportar PDF",
+        description: "Não foi possível exportar o PDF. Tente novamente.",
+        variant: "destructive",
+      });
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     if (userProfile && user) {
@@ -311,56 +384,68 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
 
   return (
     <div className="space-y-6">
-      {/* Resumo Nutricional */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-nutri-green-500" />
-              Suas Metas Nutricionais Diárias
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setShowEditGoals(true)}
-                size="sm"
-                variant="outline"
-              >
-                Editar Metas
-              </Button>
-              <Button
-                onClick={() => generateMealPlan(customGoals || undefined)}
-                disabled={isGenerating}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                {isGenerating ? 'Gerando...' : 'Gerar Novo Plano'}
-              </Button>
+      {/* Resumo Nutricional - agora com ref */}
+      <div ref={metasRef}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-nutri-green-500" />
+                Suas Metas Nutricionais Diárias
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowEditGoals(true)}
+                  size="sm"
+                  variant="outline"
+                >
+                  Editar Metas
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleExportPDF}
+                  size="sm"
+                  variant="outline"
+                  title="Exportar plano para PDF"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Exportar PDF
+                </Button>
+                <Button
+                  onClick={() => generateMealPlan(customGoals || undefined)}
+                  disabled={isGenerating}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
+                  {isGenerating ? 'Gerando Novo Plano' : 'Gerar Novo Plano'}
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-nutri-green-600">{displayedGoals.calories}</div>
-              <div className="text-sm text-gray-600">Meta Calorias</div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-nutri-green-600">{displayedGoals.calories}</div>
+                <div className="text-sm text-gray-600">Meta Calorias</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{displayedGoals.protein}g</div>
+                <div className="text-sm text-gray-600">Meta Proteínas</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{displayedGoals.carbs}g</div>
+                <div className="text-sm text-gray-600">Meta Carboidratos</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{displayedGoals.fat}g</div>
+                <div className="text-sm text-gray-600">Meta Gorduras</div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{displayedGoals.protein}g</div>
-              <div className="text-sm text-gray-600">Meta Proteínas</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{displayedGoals.carbs}g</div>
-              <div className="text-sm text-gray-600">Meta Carboidratos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{displayedGoals.fat}g</div>
-              <div className="text-sm text-gray-600">Meta Gorduras</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+          </CardContent>
+        </Card>
+      </div>
       {/* Modal de edição das metas */}
       <EditNutritionGoalsModal
         open={showEditGoals}
@@ -369,175 +454,179 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         currentGoals={displayedGoals}
       />
 
-      {/* Accordion de Refeições */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Utensils className="w-5 h-5 text-nutri-green-500" />
-            Seu Plano de Refeições - Base TBCA-USP
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Accordion type="single" collapsible defaultValue="cafe-da-manha" className="space-y-4">
-            {mealPlan.meals.map((meal) => (
-              <AccordionItem key={meal.id} value={meal.type} className="border rounded-lg">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-nutri-green-500 rounded-full">
-                        <Utensils className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium">{meal.name}</div>
-                        <div className="text-sm text-gray-600 flex items-center gap-2">
-                          <Clock className="w-3 h-3" />
-                          {meal.time}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mr-4">
-                      <Badge variant="secondary" className="text-xs">
-                        {Math.round(meal.totalCalories)} kcal
-                      </Badge>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          regenerateMeal(meal.type);
-                        }}
-                        disabled={isRegeneratingMeal === meal.type}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Shuffle className={`w-3 h-3 ${isRegeneratingMeal === meal.type ? 'animate-spin' : ''}`} />
-                      </Button>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <div className="space-y-4">
-                    {meal.foods && meal.foods.length > 0 ? (
-                      meal.foods.map((mealFood, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-nutri-green-100 rounded-lg flex items-center justify-center">
-                              <Utensils className="w-5 h-5 text-nutri-green-600" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-sm">{mealFood.food.name}</h4>
-                              <p className="text-xs text-gray-600">
-                                {formatQuantity(mealFood.quantity)} • {Math.round(mealFood.calories)} kcal • TBCA-USP
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex gap-1">
-                              <Badge variant="secondary" className="text-xs">
-                                P: {Math.round(mealFood.protein * 10) / 10}g
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                C: {Math.round(mealFood.carbs * 10) / 10}g
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                G: {Math.round(mealFood.fat * 10) / 10}g
-                              </Badge>
-                            </div>
-                            <Button
-                              onClick={() => openSubstitutionModal(meal.type, index)}
-                              variant="outline"
-                              size="sm"
-                              title="Trocar alimento"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-4 text-gray-500">
-                        <ChefHat className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Nenhum alimento encontrado para esta refeição</p>
-                        <Button
-                          onClick={() => regenerateMeal(meal.type)}
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                        >
-                          Tentar novamente
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Resumo da Refeição */}
-                    <div className="grid grid-cols-4 gap-4 pt-3 border-t text-sm">
-                      <div className="text-center">
-                        <span className="text-gray-600">Total:</span>
-                        <div className="font-semibold">{Math.round(meal.totalCalories)} kcal</div>
-                      </div>
-                      <div className="text-center">
-                        <span className="text-gray-600">Proteínas:</span>
-                        <div className="font-semibold text-blue-600">{Math.round(meal.totalProtein * 10) / 10}g</div>
-                      </div>
-                      <div className="text-center">
-                        <span className="text-gray-600">Carboidratos:</span>
-                        <div className="font-semibold text-orange-600">{Math.round(meal.totalCarbs * 10) / 10}g</div>
-                      </div>
-                      <div className="text-center">
-                        <span className="text-gray-600">Gorduras:</span>
-                        <div className="font-semibold text-purple-600">{Math.round(meal.totalFat * 10) / 10}g</div>
-                      </div>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </CardContent>
-      </Card>
-
-      {/* Resumo do Dia */}
-      {mealPlan.meals.length > 0 && (
+      {/* Accordion de Refeições - envolver com ref e abrir todos menus */}
+      <div ref={planoRef}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-nutri-green-500" />
-              Resumo do Dia
+              <Utensils className="w-5 h-5 text-nutri-green-500" />
+              Seu Plano de Refeições - Base TBCA-USP
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-nutri-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-nutri-green-600">
-                  {Math.round(mealPlan.totalCalories)}
-                </div>
-                <div className="text-sm text-gray-600">Total de Calorias</div>
-                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetCalories)}</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(mealPlan.totalProtein)}g
-                </div>
-                <div className="text-sm text-gray-600">Total de Proteínas</div>
-                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetProtein)}g</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">
-                  {Math.round(mealPlan.totalCarbs)}g
-                </div>
-                <div className="text-sm text-gray-600">Total de Carboidratos</div>
-                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetCarbs)}g</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {Math.round(mealPlan.totalFat)}g
-                </div>
-                <div className="text-sm text-gray-600">Total de Gorduras</div>
-                <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetFat)}g</div>
-              </div>
-            </div>
+            {/* Accordion com todas refeições abertas no export */}
+            <Accordion type="multiple" defaultValue={mealPlan.meals.map(m => m.type)} className="space-y-4">
+              {mealPlan.meals.map((meal) => (
+                <AccordionItem key={meal.id} value={meal.type} className="border rounded-lg">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-nutri-green-500 rounded-full">
+                          <Utensils className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium">{meal.name}</div>
+                          <div className="text-sm text-gray-600 flex items-center gap-2">
+                            <Clock className="w-3 h-3" />
+                            {meal.time}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mr-4">
+                        <Badge variant="secondary" className="text-xs">
+                          {Math.round(meal.totalCalories)} kcal
+                        </Badge>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            regenerateMeal(meal.type);
+                          }}
+                          disabled={isRegeneratingMeal === meal.type}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Shuffle className={`w-3 h-3 ${isRegeneratingMeal === meal.type ? 'animate-spin' : ''}`} />
+                        </Button>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="space-y-4">
+                      {meal.foods && meal.foods.length > 0 ? (
+                        meal.foods.map((mealFood, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-nutri-green-100 rounded-lg flex items-center justify-center">
+                                <Utensils className="w-5 h-5 text-nutri-green-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-sm">{mealFood.food.name}</h4>
+                                <p className="text-xs text-gray-600">
+                                  {formatQuantity(mealFood.quantity)} • {Math.round(mealFood.calories)} kcal • TBCA-USP
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex gap-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  P: {Math.round(mealFood.protein * 10) / 10}g
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  C: {Math.round(mealFood.carbs * 10) / 10}g
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  G: {Math.round(mealFood.fat * 10) / 10}g
+                                </Badge>
+                              </div>
+                              <Button
+                                onClick={() => openSubstitutionModal(meal.type, index)}
+                                variant="outline"
+                                size="sm"
+                                title="Trocar alimento"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          <ChefHat className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Nenhum alimento encontrado para esta refeição</p>
+                          <Button
+                            onClick={() => regenerateMeal(meal.type)}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                          >
+                            Tentar novamente
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Resumo da Refeição */}
+                      <div className="grid grid-cols-4 gap-4 pt-3 border-t text-sm">
+                        <div className="text-center">
+                          <span className="text-gray-600">Total:</span>
+                          <div className="font-semibold">{Math.round(meal.totalCalories)} kcal</div>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-gray-600">Proteínas:</span>
+                          <div className="font-semibold text-blue-600">{Math.round(meal.totalProtein * 10) / 10}g</div>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-gray-600">Carboidratos:</span>
+                          <div className="font-semibold text-orange-600">{Math.round(meal.totalCarbs * 10) / 10}g</div>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-gray-600">Gorduras:</span>
+                          <div className="font-semibold text-purple-600">{Math.round(meal.totalFat * 10) / 10}g</div>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </CardContent>
         </Card>
+      </div>
+      {/* Resumo do Dia - envolver com ref */}
+      {mealPlan.meals.length > 0 && (
+        <div ref={resumoRef}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-nutri-green-500" />
+                Resumo do Dia
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Resumo cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-nutri-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-nutri-green-600">
+                    {Math.round(mealPlan.totalCalories)}
+                  </div>
+                  <div className="text-sm text-gray-600">Total de Calorias</div>
+                  <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetCalories)}</div>
+                </div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {Math.round(mealPlan.totalProtein)}g
+                  </div>
+                  <div className="text-sm text-gray-600">Total de Proteínas</div>
+                  <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetProtein)}g</div>
+                </div>
+                <div className="text-center p-4 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {Math.round(mealPlan.totalCarbs)}g
+                  </div>
+                  <div className="text-sm text-gray-600">Total de Carboidratos</div>
+                  <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetCarbs)}g</div>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {Math.round(mealPlan.totalFat)}g
+                  </div>
+                  <div className="text-sm text-gray-600">Total de Gorduras</div>
+                  <div className="text-xs text-gray-500">Meta: {Math.round(mealPlan.targetFat)}g</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
-
       {/* Modal de Substituição */}
       {showSubstitutionModal && selectedFoodForSubstitution && (
         <FoodSubstitutionModal
@@ -548,7 +637,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
           }}
           currentFood={selectedFoodForSubstitution.food}
           onSubstitute={handleFoodSubstitution}
-          restrictions={userProfile.food_restrictions ? userProfile.food_restrictions.split(',').map(r => r.trim()) : []}
+          restrictions={userProfile.food_restrictions ? userProfile.food_restrictions.split(",").map((r) => r.trim()) : []}
         />
       )}
     </div>
