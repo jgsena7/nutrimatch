@@ -107,7 +107,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       };
 
       await appendSectionToPDF(metasRef, "Metas Nutricionais Diárias");
-      // REMOVE: await appendSectionToPDF(planoRef, "Plano de Refeições (todos abertos)");
+      await appendSectionToPDF(planoRef, "Seu Plano de Refeições");
       await appendSectionToPDF(resumoRef, "Resumo do Dia");
 
       doc.save("plano-alimentar.pdf");
