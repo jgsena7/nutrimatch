@@ -67,7 +67,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         titulo: string
       ) => {
         if (!ref.current) return;
-        // Adiciona título antes da seção
+        // Adiciona título antes da seção (sem textos extras)
         doc.setFontSize(16);
         doc.text(titulo, padding, yOffset + 8);
 
@@ -75,7 +75,8 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         const canvas = await html2canvas(ref.current, {
           scale: 2,
           useCORS: true,
-          backgroundColor: "#fff",
+          // Aplica cor de fundo igual ao Tailwind bg-background (css root) – branco
+          backgroundColor: "#fff"
         });
         const imgData = canvas.toDataURL("image/png");
         const imgProps = doc.getImageProperties(imgData);
@@ -85,12 +86,12 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         const aspectRatio = imgProps.height / imgProps.width;
         const pdfHeight = pdfWidth * aspectRatio;
 
-        // Se não couber na página, quebra
+        // Se não couber na página, quebra (sem o texto '(cont.)')
         if (yOffset + 8 + pdfHeight > doc.internal.pageSize.getHeight() - padding) {
           doc.addPage();
           yOffset = 10;
           doc.setFontSize(16);
-          doc.text(titulo + " (cont.)", padding, yOffset + 8);
+          doc.text(titulo, padding, yOffset + 8);
         }
         yOffset += 10;
 
@@ -106,7 +107,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       };
 
       await appendSectionToPDF(metasRef, "Metas Nutricionais Diárias");
-      await appendSectionToPDF(planoRef, "Plano de Refeições (todos abertos)");
+      // REMOVE: await appendSectionToPDF(planoRef, "Plano de Refeições (todos abertos)");
       await appendSectionToPDF(resumoRef, "Resumo do Dia");
 
       doc.save("plano-alimentar.pdf");
@@ -419,7 +420,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                   size="sm"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                  {isGenerating ? 'Gerando Novo Plano' : 'Gerar Novo Plano'}
+                  {isGenerating ? 'Gerar Novo Plano' : 'Gerar Novo Plano'}
                 </Button>
               </div>
             </div>
