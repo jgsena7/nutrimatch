@@ -3,13 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, Target, Utensils, ThumbsUp, ThumbsDown, RefreshCw, ChefHat } from 'lucide-react';
+import { Clock, Users, Target, Utensils, ThumbsUp, ThumbsDown, RefreshCw, ChefHat, Shuffle } from 'lucide-react';
 import { foodDataService, FoodItem } from '@/services/foodDataService';
 import { NutritionalCalculator, UserProfile, NutritionalNeeds } from '@/services/nutritionalCalculator';
 import { mealPlanCache } from '@/services/mealPlanCache';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
-import { NutritionalPieChart } from './NutritionalPieChart';
 
 interface MealFood {
   food: FoodItem;
@@ -41,6 +40,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
   const [nutritionalNeeds, setNutritionalNeeds] = useState<NutritionalNeeds | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRegeneratingMeal, setIsRegeneratingMeal] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -61,7 +61,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       // Tentar carregar do cache primeiro
       const cachedPlan = mealPlanCache.getMealPlan(user.id, userProfile);
       
-      if (cachedPlan && cachedPlan.meals) {
+      if (cachedPlan && cachedPlan.meals && cachedPlan.meals.length > 0) {
         console.log('Carregando plano do cache...');
         setMeals(cachedPlan.meals);
         setIsLoading(false);
@@ -96,28 +96,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
 
       // Gerar todas as refeições com melhor distribuição de macros
       const mealPromises = Object.entries(mealCalories).map(async ([mealId, targetCalories]) => {
-        const meal: Meal = {
-          id: mealId,
-          name: mealNames[mealId],
-          time: mealSchedule[mealId],
-          targetCalories,
-          foods: [],
-          totalCalories: 0,
-          totalProtein: 0,
-          totalCarbs: 0,
-          totalFat: 0
-        };
-
-        // Gerar alimentos para esta refeição com foco nas metas nutricionais
-        const mealFoods = await generateOptimizedMealFoods(mealId, targetCalories, needs, userProfile);
-        meal.foods = mealFoods;
-        
-        // Calcular totais
-        meal.totalCalories = mealFoods.reduce((sum, food) => sum + food.calories, 0);
-        meal.totalProtein = mealFoods.reduce((sum, food) => sum + food.protein, 0);
-        meal.totalCarbs = mealFoods.reduce((sum, food) => sum + food.carbs, 0);
-        meal.totalFat = mealFoods.reduce((sum, food) => sum + food.fat, 0);
-
+        const meal = await generateSingleMeal(mealId, mealNames[mealId], mealSchedule[mealId], targetCalories, needs);
         return meal;
       });
 
@@ -155,6 +134,136 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     } finally {
       setIsGenerating(false);
       setIsLoading(false);
+    }
+  };
+
+  const generateSingleMeal = async (
+    mealId: string,
+    name: string,
+    time: string,
+    targetCalories: number,
+    needs: NutritionalNeeds
+  ): Promise<Meal> => {
+    const meal: Meal = {
+      id: mealId,
+      name,
+      time,
+      targetCalories,
+      foods: [],
+      totalCalories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFat: 0
+    };
+
+    // Gerar alimentos para esta refeição com múltiplas tentativas para garantir que não fique vazia
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (meal.foods.length === 0 && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Tentativa ${attempts} para gerar ${mealId}`);
+      
+      try {
+        const mealFoods = await generateOptimizedMealFoods(mealId, targetCalories, needs, userProfile);
+        meal.foods = mealFoods;
+      } catch (error) {
+        console.error(`Erro na tentativa ${attempts} para ${mealId}:`, error);
+        if (attempts === maxAttempts) {
+          // Fallback: criar uma refeição básica
+          meal.foods = await createFallbackMeal(mealId, targetCalories);
+        }
+      }
+    }
+    
+    // Calcular totais
+    meal.totalCalories = meal.foods.reduce((sum, food) => sum + food.calories, 0);
+    meal.totalProtein = meal.foods.reduce((sum, food) => sum + food.protein, 0);
+    meal.totalCarbs = meal.foods.reduce((sum, food) => sum + food.carbs, 0);
+    meal.totalFat = meal.foods.reduce((sum, food) => sum + food.fat, 0);
+
+    return meal;
+  };
+
+  const createFallbackMeal = async (mealId: string, targetCalories: number): Promise<MealFood[]> => {
+    const fallbackFoods = {
+      'cafe-da-manha': ['pão', 'banana', 'leite'],
+      'lanche-manha': ['maçã', 'iogurte'],
+      'almoco': ['arroz', 'feijão', 'frango'],
+      'lanche-tarde': ['pão integral', 'queijo'],
+      'jantar': ['batata', 'carne', 'salada'],
+      'ceia': ['chá', 'biscoito']
+    };
+
+    const foodQueries = fallbackFoods[mealId as keyof typeof fallbackFoods] || ['arroz', 'feijão'];
+    const mealFoods: MealFood[] = [];
+
+    for (const query of foodQueries) {
+      try {
+        const searchResults = await foodDataService.searchFoods(query, 3);
+        if (searchResults.length > 0) {
+          const food = searchResults[0];
+          const quantity = Math.min(100, Math.max(30, (targetCalories / foodQueries.length / food.calories) * 100));
+          
+          mealFoods.push({
+            food,
+            quantity: Math.round(quantity),
+            calories: Math.round((quantity / 100) * food.calories),
+            protein: Math.round((quantity / 100) * food.protein * 10) / 10,
+            carbs: Math.round((quantity / 100) * food.carbs * 10) / 10,
+            fat: Math.round((quantity / 100) * food.fat * 10) / 10
+          });
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar ${query}:`, error);
+      }
+    }
+
+    return mealFoods;
+  };
+
+  const regenerateMeal = async (mealId: string) => {
+    if (!nutritionalNeeds) return;
+    
+    setIsRegeneratingMeal(mealId);
+    
+    try {
+      const mealToRegenerate = meals.find(m => m.id === mealId);
+      if (!mealToRegenerate) return;
+      
+      const newMeal = await generateSingleMeal(
+        mealId, 
+        mealToRegenerate.name, 
+        mealToRegenerate.time, 
+        mealToRegenerate.targetCalories, 
+        nutritionalNeeds
+      );
+      
+      const updatedMeals = meals.map(meal => 
+        meal.id === mealId ? newMeal : meal
+      );
+      
+      setMeals(updatedMeals);
+      
+      // Atualizar cache
+      if (user) {
+        mealPlanCache.saveMealPlan(user.id, userProfile, { meals: updatedMeals });
+      }
+      
+      toast({
+        title: "Refeição regenerada!",
+        description: `${newMeal.name} foi atualizada com novas opções.`,
+      });
+      
+    } catch (error) {
+      console.error('Erro ao regenerar refeição:', error);
+      toast({
+        title: "Erro ao regenerar",
+        description: "Não foi possível regenerar a refeição. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegeneratingMeal(null);
     }
   };
 
@@ -366,7 +475,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     );
   }
 
-  // Calcular totais para o gráfico de pizza
+  // Calcular totais
   const totalCalories = meals.reduce((sum, meal) => sum + meal.totalCalories, 0);
   const totalProtein = meals.reduce((sum, meal) => sum + meal.totalProtein, 0);
   const totalCarbs = meals.reduce((sum, meal) => sum + meal.totalCarbs, 0);
@@ -421,16 +530,6 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         </Card>
       )}
 
-      {/* Gráfico de Pizza */}
-      {meals.length > 0 && (
-        <NutritionalPieChart
-          totalCalories={totalCalories}
-          totalProtein={totalProtein}
-          totalCarbs={totalCarbs}
-          totalFat={totalFat}
-        />
-      )}
-
       {/* Plano de Refeições */}
       <div className="grid gap-6">
         {meals.map((meal) => (
@@ -449,49 +548,74 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-nutri-green-600">
-                    {meal.totalCalories} kcal
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-nutri-green-600">
+                      {meal.totalCalories} kcal
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Meta: {meal.targetCalories} kcal
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    Meta: {meal.targetCalories} kcal
-                  </div>
+                  <Button
+                    onClick={() => regenerateMeal(meal.id)}
+                    disabled={isRegeneratingMeal === meal.id}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Shuffle className={`w-4 h-4 ${isRegeneratingMeal === meal.id ? 'animate-spin' : ''}`} />
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                {meal.foods.map((mealFood, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
-                        alt={mealFood.food.name}
-                        className="w-12 h-12 rounded-lg object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center';
-                        }}
-                      />
-                      <div>
-                        <h4 className="font-medium">{mealFood.food.name}</h4>
-                        <p className="text-sm text-gray-600">
-                          {formatQuantity(mealFood.quantity)} • {mealFood.calories} kcal • TBCA-USP
-                        </p>
+                {meal.foods.length > 0 ? (
+                  meal.foods.map((mealFood, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
+                          alt={mealFood.food.name}
+                          className="w-12 h-12 rounded-lg object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center';
+                          }}
+                        />
+                        <div>
+                          <h4 className="font-medium">{mealFood.food.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            {formatQuantity(mealFood.quantity)} • {mealFood.calories} kcal • TBCA-USP
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          P: {mealFood.protein}g
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          C: {mealFood.carbs}g
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          G: {mealFood.fat}g
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        P: {mealFood.protein}g
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        C: {mealFood.carbs}g
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        G: {mealFood.fat}g
-                      </Badge>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <ChefHat className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum alimento encontrado para esta refeição</p>
+                    <Button
+                      onClick={() => regenerateMeal(meal.id)}
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                    >
+                      Tentar novamente
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
 
               <Separator className="my-4" />
@@ -543,25 +667,25 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-nutri-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-nutri-green-600">
-                  {meals.reduce((sum, meal) => sum + meal.totalCalories, 0)}
+                  {Math.round(totalCalories)}
                 </div>
                 <div className="text-sm text-gray-600">Total de Calorias</div>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(meals.reduce((sum, meal) => sum + meal.totalProtein, 0))}g
+                  {Math.round(totalProtein)}g
                 </div>
                 <div className="text-sm text-gray-600">Total de Proteínas</div>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {Math.round(meals.reduce((sum, meal) => sum + meal.totalCarbs, 0))}g
+                  {Math.round(totalCarbs)}g
                 </div>
                 <div className="text-sm text-gray-600">Total de Carboidratos</div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {Math.round(meals.reduce((sum, meal) => sum + meal.totalFat, 0))}g
+                  {Math.round(totalFat)}g
                 </div>
                 <div className="text-sm text-gray-600">Total de Gorduras</div>
               </div>
