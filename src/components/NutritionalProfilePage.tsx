@@ -63,7 +63,7 @@ const NutritionalProfilePage = () => {
     <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900">
       <SidebarMenu />
       
-      <div className="pl-16 pr-6 py-6 pt-24">
+      <div className="pl-16 pr-6 py-6">
         <div className="max-w-4xl mx-auto">
           {/* Header do Perfil */}
           <Card className="mb-8 bg-white/95 backdrop-blur-sm">
