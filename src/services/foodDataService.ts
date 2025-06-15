@@ -1,5 +1,5 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { aiImageService } from "./aiImageService";
 
 export interface FoodItem {
   id: string;
@@ -15,7 +15,6 @@ export interface FoodItem {
   category?: string;
   allergens?: string[];
   ingredients?: string[];
-  image?: string;
   source?: string;
   rating?: number;
 }
@@ -94,13 +93,22 @@ class FoodDataService {
       sodium: food.sodium ? Math.round(food.sodium) : undefined,
       category: food.category ? this.translateCategory(food.category) : undefined,
       allergens: food.allergens ? this.translateAllergens(food.allergens) : [],
-      ingredients: food.ingredients ? this.translateIngredients(food.ingredients) : [],
-      image: this.getAIGeneratedFoodImage(food.name, food.category) // Usar IA em vez de imagens estáticas
+      ingredients: food.ingredients ? this.translateIngredients(food.ingredients) : []
     };
   }
 
   private formatFoodName(name: string): string {
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase().trim();
+    // Remover a palavra "cru" e variações
+    const cleanName = name
+      .replace(/,\s*cru\s*$/gi, '') // Remove ", cru" no final
+      .replace(/,\s*crua\s*$/gi, '') // Remove ", crua" no final
+      .replace(/\s+cru\s*$/gi, '') // Remove " cru" no final
+      .replace(/\s+crua\s*$/gi, '') // Remove " crua" no final
+      .replace(/\s+cruas\s*$/gi, '') // Remove " cruas" no final
+      .replace(/\s+crus\s*$/gi, '') // Remove " crus" no final
+      .trim();
+    
+    return cleanName.charAt(0).toUpperCase() + cleanName.slice(1).toLowerCase();
   }
 
   private translateCategory(category: string): string {
@@ -163,61 +171,6 @@ class FoodDataService {
     });
   }
 
-  private getAIGeneratedFoodImage(foodName: string, category?: string): string {
-    // Iniciar geração assíncrona da imagem com IA
-    aiImageService.generateFoodImage(foodName, category).catch(error => {
-      console.warn(`Falha ao gerar imagem para ${foodName}:`, error);
-    });
-
-    // Retornar placeholder temporário enquanto a IA gera a imagem
-    return this.getStaticFallbackImage(foodName);
-  }
-
-  private getStaticFallbackImage(foodName: string): string {
-    const name = foodName.toLowerCase();
-    
-    // Mapear alimentos brasileiros para imagens do Unsplash (fallback)
-    if (name.includes('arroz')) {
-      return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('feijão')) {
-      return 'https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('banana')) {
-      return 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('frango')) {
-      return 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('mandioca')) {
-      return 'https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('açaí')) {
-      return 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('pão')) {
-      return 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('leite')) {
-      return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('ovo')) {
-      return 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('batata')) {
-      return 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('tomate')) {
-      return 'https://images.unsplash.com/photo-1546470427-e83e1f91d6cd?w=200&h=200&fit=crop&crop=center';
-    }
-    if (name.includes('alface')) {
-      return 'https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=200&h=200&fit=crop&crop=center';
-    }
-    
-    // Imagem padrão
-    return 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center';
-  }
-
   private async searchTBCA(query: string, maxResults: number): Promise<FoodItem[]> {
     try {
       const { data, error } = await supabase.functions.invoke('search-food-tbca', {
@@ -229,28 +182,15 @@ class FoodDataService {
         return [];
       }
       
-      // Processar alimentos e iniciar geração de imagens em background
       const foods = data?.foods || [];
       
-      // Preparar lista de alimentos para geração de imagens em background
-      const foodsForImageGeneration = foods.map((food: FoodItem) => ({
-        name: food.name,
-        category: food.category
-      }));
-
-      // Iniciar geração de imagens em background (não aguarda)
-      if (foodsForImageGeneration.length > 0) {
-        aiImageService.generateImagesInBackground(foodsForImageGeneration);
-      }
-      
-      // Retornar alimentos com imagens de fallback enquanto IA gera as reais
-      const foodsWithImages = foods.map((food: FoodItem) => ({
+      // Retornar alimentos sem imagens
+      const foodsWithoutImages = foods.map((food: FoodItem) => ({
         ...food,
-        image: this.getStaticFallbackImage(food.name),
         rating: 5 // TBCA tem dados de alta qualidade
       }));
       
-      return foodsWithImages;
+      return foodsWithoutImages;
     } catch (error) {
       console.error('Erro TBCA API:', error);
       return [];

@@ -9,7 +9,6 @@ import { foodDataService } from '@/services/foodDataService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from "@/hooks/use-toast";
 import FoodSubstitutionModal from './FoodSubstitutionModal';
-import { AIFoodImage } from './AIFoodImage';
 
 interface MealPlanGeneratorProps {
   userProfile: {
@@ -377,13 +376,9 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
                       meal.foods.map((mealFood, index) => (
                         <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <AIFoodImage
-                              foodName={mealFood.food.name}
-                              category={mealFood.food.category}
-                              fallbackImage={mealFood.food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=48&h=48&fit=crop&crop=center'}
-                              alt={mealFood.food.name}
-                              className="w-10 h-10 rounded-lg"
-                            />
+                            <div className="w-10 h-10 bg-nutri-green-100 rounded-lg flex items-center justify-center">
+                              <Utensils className="w-5 h-5 text-nutri-green-600" />
+                            </div>
                             <div>
                               <h4 className="font-medium text-sm">{mealFood.food.name}</h4>
                               <p className="text-xs text-gray-600">
