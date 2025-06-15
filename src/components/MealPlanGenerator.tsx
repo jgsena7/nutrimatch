@@ -278,7 +278,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
               com alimentos validados pela Universidade de São Paulo.
             </p>
             <Button 
-              onClick={generateMealPlan} 
+              onClick={() => generateMealPlan()} 
               disabled={isGenerating}
               className="bg-nutri-green-500 hover:bg-nutri-green-600 px-8 py-3 text-lg"
             >
