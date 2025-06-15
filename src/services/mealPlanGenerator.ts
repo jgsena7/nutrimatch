@@ -1,4 +1,3 @@
-
 import { foodDataService, FoodItem } from './foodDataService';
 
 export interface UserProfile {
@@ -29,7 +28,7 @@ export interface MealPlan {
 
 export interface Meal {
   id: string;
-  type: 'cafe-da-manha' | 'lanche-manha' | 'almoco' | 'lanche-tarde' | 'jantar' | 'ceia';
+  type: 'cafe-da-manha' | 'lanche-manha' | 'almoco' | 'lanche-tarde' | 'jantar';
   name: string;
   time: string;
   foods: MealFood[];
@@ -193,14 +192,23 @@ class MealPlanGenerator {
     const targetCalories = this.calculateBMR(profile);
     const macros = this.calculateMacros(targetCalories, profile.goal);
 
-    // Distribuição de calorias por refeição
+    // Nova distribuição sem ceia (soma das percentagens igual a 1, proporcional)
+    // Redistribuição: (antes: 0.25+0.10+0.30+0.10+0.20+0.05)
+    // Novo: 
+    // café-da-manha: 0.263
+    // lanche-manha: 0.105
+    // almoco: 0.316
+    // lanche-tarde: 0.105
+    // jantar: 0.211
+    //
+    // (baseado em: (antiga_pct/0.95), ex: 0.25/0.95=0.263)
+
     const mealDistribution = {
-      'cafe-da-manha': 0.25,
-      'lanche-manha': 0.10,
-      'almoco': 0.30,
-      'lanche-tarde': 0.10,
-      'jantar': 0.20,
-      'ceia': 0.05
+      'cafe-da-manha': 0.263,
+      'lanche-manha': 0.105,
+      'almoco': 0.316,
+      'lanche-tarde': 0.105,
+      'jantar': 0.211
     };
 
     const meals: Meal[] = [];
@@ -407,11 +415,8 @@ class MealPlanGenerator {
         { categories: ['peixe', 'legumes', 'salada'] },
         { categories: ['frango', 'batata', 'vegetais'] },
         { categories: ['carne', 'arroz', 'brócolis'] }
-      ],
-      'ceia': [
-        { categories: ['leite', 'aveia'] },
-        { categories: ['iogurte', 'frutas'] }
       ]
+      // Ceia removida dos templates
     };
 
     return templates[type] || [];
@@ -482,8 +487,8 @@ class MealPlanGenerator {
       'lanche-manha': 'Lanche da Manhã',
       'almoco': 'Almoço',
       'lanche-tarde': 'Lanche da Tarde',
-      'jantar': 'Jantar',
-      'ceia': 'Ceia'
+      'jantar': 'Jantar'
+      // 'ceia': 'Ceia', // removido
     };
     return names[type];
   }
@@ -494,11 +499,12 @@ class MealPlanGenerator {
       'lanche-manha': '10:00',
       'almoco': '12:00',
       'lanche-tarde': '15:00',
-      'jantar': '19:00',
-      'ceia': '21:00'
+      'jantar': '19:00'
+      // 'ceia': '21:00', // removido
     };
     return times[type];
   }
+  
 }
 
 export const mealPlanGenerator = new MealPlanGenerator();
