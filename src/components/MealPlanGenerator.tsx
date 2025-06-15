@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -263,7 +264,6 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
     if (!user || !userProfile) return;
     try {
       // Busca o perfil nutricional já existente (caso precise)
-      // Aqui estamos considerando que há apenas um perfil ativo por user (ajuste se precisar associar múltiplos perfis)
       const { data: profiles, error } = await supabase
         .from("nutritional_profiles")
         .select("id")
@@ -273,7 +273,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
 
       const nutritionalProfileId = profiles[0].id;
 
-      // Realiza UPSERT para manter sempre o plano mais recente por data usuário/perfil
+      // Correção: serializar o plano como JSON puro para garantir compatibilidade!
       await supabase
         .from("user_meal_plans")
         .upsert([
@@ -281,14 +281,14 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
             user_id: user.id,
             user_profile_id: nutritionalProfileId,
             plan_date: new Date().toISOString().split("T")[0],
-            plan_data: plan,
+            plan_data: JSON.parse(JSON.stringify(plan)), // <-- AQUI
             updated_at: new Date().toISOString()
           }
         ], { onConflict: "user_id,plan_date" });
 
       // Aqui não exibimos toast ao usuário para ficar transparente, mas pode ser adicionado se desejar
     } catch (e) {
-      // Log apenas para debug; toast pode ser adicionado se necessário
+      // Log para debug
       console.error("Erro ao salvar plano customizado na Supabase", e);
     }
   };
