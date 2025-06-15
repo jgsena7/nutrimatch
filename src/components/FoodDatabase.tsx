@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Search, Database, Loader2, MapPin, Star } from 'lucide-react';
+import { Search, Database, Loader2, MapPin, Star, Utensils } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,15 +165,8 @@ const FoodDatabase = () => {
                       className="cursor-pointer hover:shadow-lg transition-all hover:bg-nutri-green-50 overflow-hidden"
                       onClick={() => openFoodDetails(food)}
                     >
-                      <div className="aspect-square relative bg-gray-100">
-                        <img 
-                          src={food.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center'} 
-                          alt={food.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop&crop=center';
-                          }}
-                        />
+                      <div className="aspect-square relative bg-gray-100 flex items-center justify-center">
+                        <Utensils className="w-12 h-12 text-nutri-green-600" />
                         <div className="absolute top-2 right-2">
                           {getSourceBadge(food.source || 'Open Food Facts')}
                         </div>
@@ -219,15 +211,8 @@ const FoodDatabase = () => {
                     {selectedFood && (
                       <div className="space-y-6">
                         <div className="flex gap-4">
-                          <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            <img 
-                              src={selectedFood.image || 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=96&h=96&fit=crop&crop=center'} 
-                              alt={selectedFood.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=96&h=96&fit=crop&crop=center';
-                              }}
-                            />
+                          <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                            <Utensils className="w-8 h-8 text-nutri-green-600" />
                           </div>
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-nutri-dark-900 mb-2">
