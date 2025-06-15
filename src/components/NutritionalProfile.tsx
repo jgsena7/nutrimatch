@@ -1,11 +1,16 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+
 const NutritionalProfile = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -18,29 +23,125 @@ const NutritionalProfile = () => {
     foodPreferences: '',
     foodRestrictions: ''
   });
-  const {
-    toast
-  } = useToast();
-  const handleSubmit = (e: React.FormEvent) => {
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Perfil salvo com sucesso!",
-      description: "Seu plano alimentar personalizado está sendo criado."
-    });
+    
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para salvar o perfil.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar campos obrigatórios
+    if (!formData.name || !formData.age || !formData.height || !formData.weight || 
+        !formData.gender || !formData.activityLevel || !formData.goal) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const profileData = {
+        user_id: user.id,
+        name: formData.name.trim(),
+        age: parseInt(formData.age),
+        height: parseFloat(formData.height),
+        weight: parseFloat(formData.weight),
+        gender: formData.gender,
+        activity_level: formData.activityLevel,
+        goal: formData.goal,
+        food_preferences: formData.foodPreferences.trim() || null,
+        food_restrictions: formData.foodRestrictions.trim() || null
+      };
+
+      // Verificar se já existe um perfil para este usuário
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('nutritional_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Erro ao verificar perfil existente:', checkError);
+        throw checkError;
+      }
+
+      let result;
+      if (existingProfile) {
+        // Atualizar perfil existente
+        result = await supabase
+          .from('nutritional_profiles')
+          .update(profileData)
+          .eq('user_id', user.id);
+      } else {
+        // Criar novo perfil
+        result = await supabase
+          .from('nutritional_profiles')
+          .insert([profileData]);
+      }
+
+      if (result.error) {
+        console.error('Erro ao salvar perfil:', result.error);
+        throw result.error;
+      }
+
+      toast({
+        title: "Perfil salvo com sucesso!",
+        description: "Seu plano alimentar personalizado está sendo criado.",
+      });
+
+      // Aguardar um momento para o usuário ver a mensagem
+      setTimeout(() => {
+        navigate('/nutritional-profile');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Erro completo:', error);
+      toast({
+        title: "Erro ao salvar perfil",
+        description: "Ocorreu um erro ao salvar suas informações. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   const handleExport = () => {
     toast({
       title: "Exportando PDF...",
       description: "Seu perfil nutricional será baixado em instantes."
     });
   };
+
   const handleVisualize = () => {
-    toast({
-      title: "Visualizando plano",
-      description: "Abrindo seu plano alimentar personalizado."
-    });
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para visualizar o plano.",
+        variant: "destructive",
+      });
+      return;
+    }
+    navigate('/nutritional-profile');
   };
-  return <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
+
+  return (
+    <Card className="max-w-2xl mx-auto bg-gray-100 border-none shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center text-nutri-dark-900 text-black">
           Perfil Nutricional
@@ -50,44 +151,72 @@ const NutritionalProfile = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">Nome</Label>
-              <Input id="name" placeholder="Digite o seu nome" value={formData.name} onChange={e => setFormData({
-              ...formData,
-              name: e.target.value
-            })} className="bg-white border border-gray-300 rounded-full py-3" />
+              <Label htmlFor="name" className="text-sm font-medium text-gray-700 mb-2 block">Nome *</Label>
+              <Input 
+                id="name" 
+                placeholder="Digite o seu nome" 
+                value={formData.name} 
+                onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                className="bg-white border border-gray-300 rounded-full py-3"
+                required
+              />
             </div>
             <div>
-              <Label htmlFor="age" className="text-sm font-medium text-gray-700 mb-2 block">Idade</Label>
-              <Input id="age" placeholder="Digite a sua idade" value={formData.age} onChange={e => setFormData({
-              ...formData,
-              age: e.target.value
-            })} className="bg-white border border-gray-300 rounded-full py-3" />
+              <Label htmlFor="age" className="text-sm font-medium text-gray-700 mb-2 block">Idade *</Label>
+              <Input 
+                id="age" 
+                placeholder="Digite a sua idade" 
+                type="number"
+                min="1"
+                max="120"
+                value={formData.age} 
+                onChange={e => setFormData({ ...formData, age: e.target.value })} 
+                className="bg-white border border-gray-300 rounded-full py-3"
+                required
+              />
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="height" className="text-sm font-medium text-gray-700 mb-2 block">Altura</Label>
-              <Input id="height" placeholder="Digite a sua altura (centímetros)" value={formData.height} onChange={e => setFormData({
-              ...formData,
-              height: e.target.value
-            })} className="bg-white border border-gray-300 rounded-full py-3" />
+              <Label htmlFor="height" className="text-sm font-medium text-gray-700 mb-2 block">Altura (cm) *</Label>
+              <Input 
+                id="height" 
+                placeholder="Digite a sua altura" 
+                type="number"
+                min="100"
+                max="250"
+                step="0.1"
+                value={formData.height} 
+                onChange={e => setFormData({ ...formData, height: e.target.value })} 
+                className="bg-white border border-gray-300 rounded-full py-3"
+                required
+              />
             </div>
             <div>
-              <Label htmlFor="weight" className="text-sm font-medium text-gray-700 mb-2 block">Peso</Label>
-              <Input id="weight" placeholder="Digite o seu peso (quilos)" value={formData.weight} onChange={e => setFormData({
-              ...formData,
-              weight: e.target.value
-            })} className="bg-white border border-gray-300 rounded-full py-3" />
+              <Label htmlFor="weight" className="text-sm font-medium text-gray-700 mb-2 block">Peso (kg) *</Label>
+              <Input 
+                id="weight" 
+                placeholder="Digite o seu peso" 
+                type="number"
+                min="30"
+                max="300"
+                step="0.1"
+                value={formData.weight} 
+                onChange={e => setFormData({ ...formData, weight: e.target.value })} 
+                className="bg-white border border-gray-300 rounded-full py-3"
+                required
+              />
             </div>
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">Gênero</Label>
-            <RadioGroup value={formData.gender} onValueChange={value => setFormData({
-            ...formData,
-            gender: value
-          })}>
+            <Label className="text-sm font-medium text-gray-700 mb-3 block">Gênero *</Label>
+            <RadioGroup 
+              value={formData.gender} 
+              onValueChange={value => setFormData({ ...formData, gender: value })}
+              required
+            >
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="feminino" id="feminino" />
@@ -110,11 +239,12 @@ const NutritionalProfile = () => {
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">Nível de atividade física</Label>
-            <RadioGroup value={formData.activityLevel} onValueChange={value => setFormData({
-            ...formData,
-            activityLevel: value
-          })}>
+            <Label className="text-sm font-medium text-gray-700 mb-3 block">Nível de atividade física *</Label>
+            <RadioGroup 
+              value={formData.activityLevel} 
+              onValueChange={value => setFormData({ ...formData, activityLevel: value })}
+              required
+            >
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="sedentario" id="sedentario" />
@@ -137,11 +267,12 @@ const NutritionalProfile = () => {
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">Objetivo de saúde</Label>
-            <RadioGroup value={formData.goal} onValueChange={value => setFormData({
-            ...formData,
-            goal: value
-          })}>
+            <Label className="text-sm font-medium text-gray-700 mb-3 block">Objetivo de saúde *</Label>
+            <RadioGroup 
+              value={formData.goal} 
+              onValueChange={value => setFormData({ ...formData, goal: value })}
+              required
+            >
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="emagrecimento" id="emagrecimento" />
@@ -162,34 +293,61 @@ const NutritionalProfile = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="foodPreferences" className="text-sm font-medium text-gray-700 mb-2 block">Preferências Alimentares</Label>
-              <Input id="foodPreferences" placeholder="Digite as suas preferências" value={formData.foodPreferences} onChange={e => setFormData({
-              ...formData,
-              foodPreferences: e.target.value
-            })} className="bg-white border border-gray-300 rounded-full py-3" />
+              <Input 
+                id="foodPreferences" 
+                placeholder="Digite as suas preferências" 
+                value={formData.foodPreferences} 
+                onChange={e => setFormData({ ...formData, foodPreferences: e.target.value })} 
+                className="bg-white border border-gray-300 rounded-full py-3" 
+              />
             </div>
             <div>
               <Label htmlFor="foodRestrictions" className="text-sm font-medium text-gray-700 mb-2 block">Restrições Alimentares</Label>
-              <Input id="foodRestrictions" placeholder="Digite as suas restrições" value={formData.foodRestrictions} onChange={e => setFormData({
-              ...formData,
-              foodRestrictions: e.target.value
-            })} className="bg-white border border-gray-300 rounded-full py-3" />
+              <Input 
+                id="foodRestrictions" 
+                placeholder="Digite as suas restrições" 
+                value={formData.foodRestrictions} 
+                onChange={e => setFormData({ ...formData, foodRestrictions: e.target.value })} 
+                className="bg-white border border-gray-300 rounded-full py-3" 
+              />
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-6">
-            <Button type="submit" className="flex-1 bg-nutri-green-500 hover:bg-nutri-green-600 text-white py-3 rounded-full font-semibold">
-              Salvar Plano
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="flex-1 bg-nutri-green-500 hover:bg-nutri-green-600 text-white py-3 rounded-full font-semibold"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar Plano'
+              )}
             </Button>
-            <Button type="button" onClick={handleExport} className="flex-1 bg-nutri-green-600 hover:bg-nutri-green-700 text-white py-3 rounded-full font-semibold">
+            <Button 
+              type="button" 
+              onClick={handleExport} 
+              className="flex-1 bg-nutri-green-600 hover:bg-nutri-green-700 text-white py-3 rounded-full font-semibold"
+            >
               Exportar (PDF)
             </Button>
           </div>
           
-          <Button type="button" onClick={handleVisualize} className="w-full bg-nutri-green-400 hover:bg-nutri-green-500 text-white py-3 rounded-full font-semibold">
+          <Button 
+            type="button" 
+            onClick={handleVisualize} 
+            className="w-full bg-nutri-green-400 hover:bg-nutri-green-500 text-white py-3 rounded-full font-semibold"
+          >
             Visualizar Plano
           </Button>
         </form>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default NutritionalProfile;

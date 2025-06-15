@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Target, BarChart3, Database, Brain } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from "@/integrations/supabase/client";
 import SidebarMenu from '@/components/SidebarMenu';
-import { MealPlanInterface } from '@/components/MealPlanInterface';
+import MealPlanGenerator from '@/components/MealPlanGenerator';
 import { ProgressReports } from '@/components/ProgressReports';
 import FoodDatabase from '@/components/FoodDatabase';
 import { useToast } from "@/hooks/use-toast";
@@ -41,21 +40,24 @@ const NutritionalProfilePage = () => {
         } else if (data) {
           setUserProfile(data);
         } else {
-          // Perfil padrão se não existir
-          setUserProfile({
-            name: user?.user_metadata?.full_name || user?.email || 'Usuário',
-            age: 30,
-            height: 175,
-            weight: 80,
-            gender: 'masculino',
-            activity_level: 'moderado',
-            goal: 'manutencao',
-            food_preferences: 'Carnes magras, vegetais, frutas',
-            food_restrictions: ''
+          // Se não há perfil, mostrar mensagem para criar um
+          toast({
+            title: "Perfil não encontrado",
+            description: "Você precisa criar seu perfil nutricional primeiro. Redirecionando...",
           });
+          
+          // Redirecionar para o dashboard após 2 segundos
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
         }
       } catch (error) {
         console.error('Erro ao buscar perfil:', error);
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao carregar seu perfil. Tente novamente.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -96,7 +98,25 @@ const NutritionalProfilePage = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center">
-        <div className="text-white text-xl">Carregando...</div>
+        <div className="text-white text-xl">Carregando seu perfil nutricional...</div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-nutri-dark-900 via-nutri-dark-800 to-nutri-green-900 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <h3 className="text-lg font-semibold mb-4">Perfil não encontrado</h3>
+            <p className="text-gray-600 mb-4">
+              Você precisa criar seu perfil nutricional primeiro para visualizar seu plano alimentar.
+            </p>
+            <Button onClick={() => window.location.href = '/dashboard'}>
+              Criar Perfil Nutricional
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -117,6 +137,9 @@ const NutritionalProfilePage = () => {
                   </CardTitle>
                   <p className="text-nutri-dark-600 mt-2">
                     Sistema Inteligente de Planos Alimentares Personalizados
+                  </p>
+                  <p className="text-sm text-nutri-dark-500 mt-1">
+                    Olá, {userProfile.name}! Seu plano está personalizado para seu objetivo de {userProfile.goal}.
                   </p>
                 </div>
                 <Button
@@ -170,15 +193,13 @@ const NutritionalProfilePage = () => {
 
           {/* Conteúdo Principal */}
           <div className="space-y-6">
-            {activeTab === 'current-plan' && userProfile && (
+            {(activeTab === 'current-plan' || activeTab === 'smart-generator') && userProfile && (
               <div className="space-y-6">
-                <MealPlanInterface userProfile={userProfile} />
-              </div>
-            )}
-
-            {activeTab === 'smart-generator' && userProfile && (
-              <div className="space-y-6">
-                <MealPlanInterface userProfile={userProfile} />
+                <Card className="bg-white/95 backdrop-blur-sm">
+                  <CardContent className="p-6">
+                    <MealPlanGenerator userProfile={userProfile} />
+                  </CardContent>
+                </Card>
               </div>
             )}
 
