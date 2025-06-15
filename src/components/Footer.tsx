@@ -20,7 +20,14 @@ const Footer = () => {
             <a href="#" className="hover:text-[#A4DA14] transition-colors">Termos</a>
             <a href="#" className="hover:text-[#A4DA14] transition-colors">Privacidade</a>
             <a href="#" className="hover:text-[#A4DA14] transition-colors">Contato</a>
-            <a href="#" className="hover:text-[#A4DA14] transition-colors">API</a>
+            <a 
+              href="https://www.tbca.net.br/" 
+              className="hover:text-[#A4DA14] transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              API
+            </a>
             <a href="#" className="hover:text-[#A4DA14] transition-colors">Feedback</a>
           </div>
         </nav>
@@ -39,3 +46,4 @@ const Footer = () => {
 };
 
 export default Footer;
+
