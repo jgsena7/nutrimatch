@@ -54,7 +54,7 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
   const planoRef = React.useRef<HTMLDivElement>(null);
   const resumoRef = React.useRef<HTMLDivElement>(null);
 
-  // Função para exportar as seções para PDF
+  // Função para exportar as seções para PDF - corrigido para evitar duplicidade do título 'Seu Plano de Refeições'
   const handleExportPDF = async () => {
     try {
       const doc = new jsPDF("p", "mm", "a4");
@@ -64,19 +64,15 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       // Helper para adicionar print de uma ref na página atual do PDF
       const appendSectionToPDF = async (
         ref: React.RefObject<HTMLDivElement>,
-        titulo: string
+        titulo?: string // agora pode ser opcional
       ) => {
         if (!ref.current) return;
-        // Adiciona título antes da seção (sem textos extras)
-        doc.setFontSize(16);
-        doc.text(titulo, padding, yOffset + 8);
 
         // Renderiza a ref para imagem
         const canvas = await html2canvas(ref.current, {
           scale: 2,
           useCORS: true,
-          // Aplica cor de fundo igual ao Tailwind bg-background (css root) – branco
-          backgroundColor: "#fff"
+          backgroundColor: "#fff" // usa o fundo branco padrão Tailwind/background
         });
         const imgData = canvas.toDataURL("image/png");
         const imgProps = doc.getImageProperties(imgData);
@@ -86,14 +82,16 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
         const aspectRatio = imgProps.height / imgProps.width;
         const pdfHeight = pdfWidth * aspectRatio;
 
-        // Se não couber na página, quebra (sem o texto '(cont.)')
-        if (yOffset + 8 + pdfHeight > doc.internal.pageSize.getHeight() - padding) {
+        // Se não couber na página, quebra
+        if (yOffset + pdfHeight > doc.internal.pageSize.getHeight() - padding) {
           doc.addPage();
           yOffset = 10;
+        }
+        if (titulo) {
           doc.setFontSize(16);
           doc.text(titulo, padding, yOffset + 8);
+          yOffset += 10;
         }
-        yOffset += 10;
 
         doc.addImage(
           imgData,
@@ -107,7 +105,8 @@ const MealPlanGenerator: React.FC<MealPlanGeneratorProps> = ({ userProfile }) =>
       };
 
       await appendSectionToPDF(metasRef, "Metas Nutricionais Diárias");
-      await appendSectionToPDF(planoRef, "Seu Plano de Refeições");
+      // Ajuste: no planoRef, NÃO passar título porque o conteúdo já inclui o título no próprio card!
+      await appendSectionToPDF(planoRef, undefined);
       await appendSectionToPDF(resumoRef, "Resumo do Dia");
 
       doc.save("plano-alimentar.pdf");
